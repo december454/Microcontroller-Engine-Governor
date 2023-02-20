@@ -1,6 +1,6 @@
 // Griffin White
-// 10-14-2022
-// Spring 2022 Contract Course
+// 2-19-2023
+// Spring 2023 Contract Course
 // Engine Governor: Single-Magnet Test
 
 const int hallSensorPin = 2;                  // Pin for hall effect sensor.
