@@ -13,8 +13,12 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  Serial.print("\nReally ");
+  delay(500);
+  Serial.print("long ");
+  delay(500);
+  Serial.print("delay.");
+  delay(500);
 }
 
 void countPulse(){
