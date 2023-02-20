@@ -43,7 +43,7 @@ char keyMatrix [4][4] = {
   
 Keypad userKeypad (makeKeymap(keyMatrix), keyRowPins, keyColPins, 4, 4); // Keypad oject.
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);      // LiquidCrystal object.
-Timer timeElapsed(MILLIS);                      // Timer onject.
+Timer timeElapsed(MILLIS);                      // Timer object.
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 
 void setup() {
