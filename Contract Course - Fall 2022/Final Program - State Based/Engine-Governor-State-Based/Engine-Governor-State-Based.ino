@@ -43,7 +43,7 @@ char keyMatrix [4][4] = {
   
 Keypad userKeypad (makeKeymap(keyMatrix), keyRowPins, keyColPins, 4, 4); // Keypad oject.
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);      // LiquidCrystal object.
-Timer timeElapsed(MILLIS);                      // Timer onject.
+Timer timeElapsed(MILLIS);                      // Timer object.
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 
 void setup() {
@@ -98,7 +98,11 @@ void calcRpm(){
     // Calculating RPM: (sensor pulses / (time elapsed * 60 sec * 1000 ms)) / number of magnets on flywheel.
     rpm = (((double)sensorActivations / timeElapsed.read()) * 60000) / numMagnets;
     rpmDiff = desiredRpm - rpm; // Calculate the difference between the current RPM and desired RPM.
-    timeElapsed.stop();         // Reset the timer.    
+    
+    // This approach creates erroneous results. There is a brief period of time where the timer is not running. 
+    // The timer is not restarted until the next pulse.
+    timeElapsed.stop();         // Reset the timer.   
+    
     sensorActivations = 0;      // Reset the number of sensor activations.
     throttleRpmUpdated = true;         // Flag that the RPM was just updated.
     displayRpmUpdated = true;
