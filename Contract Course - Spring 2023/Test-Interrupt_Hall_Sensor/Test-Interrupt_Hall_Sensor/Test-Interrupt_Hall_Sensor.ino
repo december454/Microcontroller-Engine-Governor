@@ -5,13 +5,11 @@
 
 #include "Timer.h"            // Timer library.
 Timer timeElapsed(MILLIS);    // Timer object.
-
+Timer displayUpdate(MILLIS); 
 const int hallSensorPin = 2;  // Pin for hall effect sensor.
 const int numMagnets = 1;     // Number of magnets on the flywheel.
 
 double rpm = 0;               // Current RPM.
-boolean displayNeedsUpdate = false;    // If the RPM has just been updated, for display output.
-
 int sensorActivations = 0;    // Number of times the hall sensor has been activated.
 
 void setup() {
@@ -19,21 +17,21 @@ void setup() {
   pinMode(hallSensorPin,INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(hallSensorPin),countPulse,FALLING);
   Serial.begin(9600);
+  displayUpdate.start();
 }
 
 void loop() {
-  if (timeElapsed.read() > 1000){
+  
+  if (sensorActivations >= 4){
     rpm = (((double)sensorActivations / timeElapsed.read()) * 60000) / numMagnets;
     sensorActivations = 0;
-    timeElapsed.stop();
     timeElapsed.start();
-    displayNeedsUpdate = true;
   }
 
-  if(displayNeedsUpdate){
+  if(displayUpdate.read() >= 1000){
     Serial.print("RPM: ");
     Serial.println(rpm);
-    displayNeedsUpdate = false;
+    displayUpdate.start();    
   }
 
   
@@ -41,9 +39,6 @@ void loop() {
 }
 
 void countPulse(){
-  if (timeElapsed.state() == STOPPED){ // If the timer isn't running.
-      timeElapsed.start();  // Start the timer.
-  }
       
   sensorActivations++;      // Increment the number of sensorActivations.    
   
