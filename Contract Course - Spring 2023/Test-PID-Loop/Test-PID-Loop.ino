@@ -24,7 +24,8 @@ int stepsRemaining = 0;       // Number of stepper motor steps remaining.
 bool throttleRpmUpdated = false;
 boolean directionFlag = false; 
 
- double Kp=1.1, Ki=.002, Kd=0;        // PID variables.
+double Kp=1.1, Ki=.001, Kd=0;        // PID variables.
+// double Kp=0, Ki=.005, Kd=0;        // PID variables.
 // double Kp=2, Ki=20, Kd=10;        // PID variables.
 // double Kp=15, Ki=1, Kd=1; 
 // double Kp=.0, Ki=0, Kd=2; 
