@@ -15,6 +15,29 @@ Timer i2cLcdTimer(MILLIS);
 LiquidCrystal_I2C i2cLcd(0x27,16,2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 LiquidCrystal basicLcd(4, 5, 6, 7, 8, 9);   
 
+/* RESULTS
+ *  
+  hello world  
+  Serial: 0 ms
+  Basic LCD: 4 ms
+  I2C LCD: 16 ms
+ 
+  hello world abc  
+  Serial: 0 ms
+  Basic LCD: 5 ms
+  I2C LCD: 23 ms
+  
+  a
+  Serial: 0 ms
+  Basic LCD: 1 ms
+  I2C LCD: 1 ms
+  
+  abcdedfghijk
+  Serial: 0 ms
+  Basic LCD: 4 ms
+  I2C LCD: 34 ms
+*/
+
 
 void setup() {
   Wire.setClock(800000);
