@@ -62,11 +62,11 @@ void loop() {
   else
     stepperMotor.stop();
 
-  if(displayUpdate.read() >= 200){
+  if(displayUpdate.read() >= 1000){
     Serial.print("RPM: ");
     Serial.println(rpm);
-    //Serial.print("Steps Remaining: ");
-    // Serial.println(stepsRemaining);
+    Serial.print("Steps Remaining: ");
+    Serial.println(stepsRemaining);
     displayUpdate.start();    
   }   
 }
@@ -114,7 +114,7 @@ void countPulse(){
 int calculatePid(){
   
   pidP = Kp * rpmDiff;
-  pidD = Kd * rpmDiff - ((rpmDiffPrev) / pidTimeElapsed.read());
+  pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
   
 
   if (abs(rpmDiff) > rpmPrecision)
