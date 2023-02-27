@@ -3,6 +3,18 @@
 // Spring 2023 Contract Course
 // Engine Governor: PID Loop Control Test
 
+/*RESULTS:
+ * 
+ * Main Loop Time:  Min: 0 ms Max: 4 ms
+ * 
+ * This is acceptable. The program will need respond to a pulse every ~15 ms.
+ * 
+ * Simulator: (8 Magnets) * (500 RPM) = 4000 Pulse/Min -> 1 Pulse/15 ms
+ * Engine:    (1 Magnet) * (3600 RPM) = 3600 Pulse/Min -> 1 Pulse/16.667 ms
+ * 
+ */
+
+
 const int hallSensorPin = 2;                  // Pin for hall effect sensor.
 const int numMagnets = 8;                     // Number of magnets on the flywheel.
 const int rpmPrecision = 2;                   // Acceptable discrepency between desired and actual RPM.
@@ -11,18 +23,19 @@ const int updateInterval = 8;                 // Number of pulses between each c
 
 int pidP = 0, pidI = 0, pidD = 0;
 
-
-
-
-
 double desiredRpm = 500;      // Desired RPM.
 double rpm = 0;               // Current RPM.
 double rpmDiff = 0;           // Difference between the current RPM and desired RPM.
 double rpmDiffPrev = 0; 
 int sensorActivations = 0;    // Number of times the hall sensor has been activated.
 int stepsRemaining = 0;       // Number of stepper motor steps remaining.
+int stringIndex = 0;          // Current index within a String being printed to the LCD display.
+int minLoopTime = 9999;
+int maxLoopTime = 0;
+String stringRpm = "0";       // String representation of the current rpm. 
 bool throttleRpmUpdated = false;
 boolean directionFlag = false; 
+
 
 double Kp=1.1, Ki=.001, Kd=0;        // PID variables.
 // double Kp=0, Ki=.005, Kd=0;        // PID variables.
@@ -37,9 +50,13 @@ double Kp=1.1, Ki=.001, Kd=0;        // PID variables.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
+#include "LiquidCrystal_I2C.h"
+LiquidCrystal_I2C i2cLcd(0x27,16,2); 
+
 Timer timeElapsed(MILLIS);      // Timer object for RPM calculations.
-Timer displayUpdate(MILLIS);    // Timer object for updating the LCD.
+Timer displayUpdateTimer(MILLIS);    // Timer object for updating the LCD.
 Timer pidTimeElapsed(MILLIS);
+Timer loopTime(MILLIS);
 
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 LiquidCrystal_I2C lcd(0x27,20,4);               // LCD Object.
@@ -48,11 +65,18 @@ void setup() {
   pinMode(hallSensorPin,INPUT_PULLUP);  // Setting the hallSensorPin pinMode to INPUT_PULLUP.
   attachInterrupt(digitalPinToInterrupt(hallSensorPin),countPulse,FALLING); // Attctching an interrupt to the hallSensorPin.
   Serial.begin(9600);                   // Initializing serial output.
-  displayUpdate.start();                // Starting the display update timer.
+  displayUpdateTimer.start();                // Starting the display update timer.
   pidTimeElapsed.start();
+
+  
+  i2cLcd.init();                   
+  i2cLcd.backlight();
+
+  
 }
 
 void loop() {
+  loopTime.start();
   // If the number of sensorActivations is sufficient to calculate the RPM.
   if (sensorActivations >= updateInterval)    
     calcRpm();
@@ -63,13 +87,19 @@ void loop() {
   else
     stepperMotor.stop();
 
-  if(displayUpdate.read() >= 1000){
-    Serial.print("RPM: ");
-    Serial.println(rpm);
-    Serial.print("Steps Remaining: ");
-    Serial.println(stepsRemaining);
-    displayUpdate.start();    
-  }   
+  if(displayUpdateTimer.read() >= 400){
+    //Serial.print("RPM: ");
+    //Serial.println(rpm);
+    //Serial.print("Steps Remaining: ");
+    //Serial.println(stepsRemaining);
+    //displayUpdate.start();    
+    updateDisplay();
+  }
+
+  if (loopTime.read() > maxLoopTime)
+    maxLoopTime = loopTime.read();
+  else if (loopTime.read() < minLoopTime)
+    minLoopTime = loopTime.read();
 }
 
 // Method for calculating the average RPM after a specified number of revolutions.
@@ -126,4 +156,30 @@ int calculatePid(){
   pidTimeElapsed.start();
 
   return abs(pidP + pidI + pidD);    
+}
+
+// Method for updating the LCD display.
+void updateDisplay(){
+  if (stringIndex == 7){
+    stringIndex = 0;
+    lcd.setCursor(8,1);
+    displayUpdateTimer.start();   
+    Serial.print("Main Loop Time - Min: ") ;
+    Serial.print (minLoopTime);
+    Serial.print(" Max: ") ;
+    Serial.println (maxLoopTime);
+    Serial.print("RPM: ");
+    Serial.print(rpm);
+    Serial.print(" Steps Remaining: ");
+    Serial.println(stepsRemaining);
+    displayUpdateTimer.start();  
+  }
+  else{
+    if (stringIndex == 0){
+      stringRpm = String(rpm) + "        ";      
+    }
+      
+    lcd.print(stringRpm.charAt(stringIndex));
+    stringIndex++;     
+  }    
 }
