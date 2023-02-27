@@ -14,7 +14,7 @@ const int startupSteps = 600;                     // The number of steps which t
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
 const int limitSwitch = 12;                       // Pin for the limit switch.
-const int desiredRpm = 1800;                      // Desired RPM.
+const int desiredRpm = 3600;                      // Desired RPM.
 const int rpmPrecision = 2;                       // Acceptable discrepency between desired and actual RPM.
 const int rpmPrecisionI = rpmPrecision + 20;      // Descripency where PID integral tuning will come into play.
 const int numMagnets = 1;                         // Number of magnets on the flywheel.
@@ -55,10 +55,6 @@ void setup() {
   
   initializeLcd();
   initializeStepper();
-
-  
-
-
 }
 
 void loop() {
