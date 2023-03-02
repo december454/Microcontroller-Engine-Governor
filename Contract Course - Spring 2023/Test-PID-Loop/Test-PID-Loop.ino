@@ -142,11 +142,9 @@ void countPulse(){
   
 }
 
-int calculatePid(){
-  
+int calculatePid(){  
   pidP = Kp * rpmDiff;
-  pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
-  
+  pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());  
 
   if (abs(rpmDiff) > rpmPrecision)
     pidI += pidI + (Ki * rpmDiff);
