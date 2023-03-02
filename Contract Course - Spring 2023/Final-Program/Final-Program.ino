@@ -8,9 +8,9 @@
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=1.1, Ki=.001, Kd=0;               // PID gain variables.
-const int maxSteps = 1150;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
-const int startupSteps = 600;                     // The number of steps which the stepper motor will open the throttle for startup.
+const double Kp=.1, Ki=0, Kd=0;               // PID gain variables.
+const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
+const int startupSteps = 300;                     // The number of steps which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
 const int limitSwitch = 12;                       // Pin for the limit switch.
@@ -143,6 +143,12 @@ void updateDisplay(){
   if (stringIndex == 7){
     stringIndex = 0;
     lcd.setCursor(8,1);
+
+    Serial.print("RPM: ");
+    Serial.println(rpm);
+    Serial.print("Steps Remaining: ");
+    Serial.println(stepsRemaining);
+    
     displayUpdateTimer.start();    
   }
   else{
