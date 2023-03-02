@@ -1,17 +1,25 @@
 // Griffin White
 // 2-26-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program - Version 1
+// Engine Governor: Final Program - Version 1.01
+
+/* Version 1.01 Changes:
+ * * * * * * * * * * * *
+ * Program will re-initialize the stepper motor once the engine has stopped.
+ * Program will monitor whether or not the engine is running.
+ * Program will reset RPM to 0 once the engine has stopped.
+ */
 
 #include <Wire.h>               // LCD library.
 #include <LiquidCrystal_I2C.h>  // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.1, Ki=0, Kd=0;               // PID gain variables.
+const double Kp=.1, Ki=0, Kd=0;                   // PID gain variables.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 300;                     // The number of steps which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
+const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
 const int limitSwitch = 12;                       // Pin for the limit switch.
 const int desiredRpm = 3600;                      // Desired RPM.
@@ -34,8 +42,9 @@ int stepsRemaining = 0;             // Number of stepper motor steps remaining.
 int pidP = 0, pidI = 0, pidD = 0;   // Output variables for the PID loop.
 int stringIndex = 0;                // Current index within a String being printed to the LCD display.
 bool throttleRpmUpdated = false;    // If the RPM has just been calculated.
-bool directionFlag = true;         // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
-String stringRpm = "0";                // String representation of the current rpm. 
+bool directionFlag = true;          // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
+bool engineRunning = false;         // If the engine is running.
+String stringRpm = "0";             // String representation of the current rpm. 
 
 Timer timeElapsed(MILLIS);        // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS); // Timer object for updating the LCD.
@@ -73,8 +82,20 @@ void loop() {
     updateDisplay();
   }
 
+  // If the rpm has risen above the minRpm. (The engine has started.)
+  if (rpm > minRpm)
+    // Flagging that the engine is running.
+    engineRunning = true;
 
-  
+  // If there has not been a hall sensor pulse for some time and the engine was reported as running. (The engine has stalled / been shut off.)
+  if (timeElapsed.read() > stallTimeout && engineRunning){
+    // Flagging that the engine is no longer running.
+    engineRunning = false;
+    // Setting the rpm to 0.
+    rpm = 0;
+    // Initializig the stepper motor, preparing for the engine to be restarted.
+    initializeStepper();
+  }  
 }
 
 // Interrupt method for recording distinct signals from the hall effect sensor.
