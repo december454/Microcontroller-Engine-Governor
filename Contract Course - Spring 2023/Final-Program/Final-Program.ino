@@ -3,11 +3,10 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program - Version 1.01
 
-/* Version 1.01 Changes:
+/* Version 1.02 Changes:
  * * * * * * * * * * * *
- * Program will re-initialize the stepper motor once the engine has stopped.
- * Program will monitor whether or not the engine is running.
- * Program will reset RPM to 0 once the engine has stopped.
+ * Limit switch is now activated on wide-open throttle, instead of fully closed throttle.
+ * Added safety to prevent the stepper from attempting to go beyond wide-open throttle.
  */
 
 #include <Wire.h>               // LCD library.
@@ -17,7 +16,7 @@
 
 const double Kp=.1, Ki=0, Kd=0;                   // PID gain variables.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
-const int startupSteps = 300;                     // The number of steps which the stepper motor will open the throttle for startup.
+const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
@@ -152,8 +151,8 @@ void adjustThrottle(){
     throttleRpmUpdated = false;       // Flagging that the new RPM has been acknowldged.
   }
 
-  // If there are stepper motor steps remaining.
-  if (stepsRemaining > 0){      
+  // If there are stepper motor steps remaining, and it isn't attempting to open beyond wide-open.
+  if ((stepsRemaining > 0) && (directionFlag || digitalRead(limitSwitch) == HIGH)){      
     stepperMotor.step(directionFlag); // Stepping in the desired direction.
     stepsRemaining--;                 // Decrementing the remaining steps.
   }  
@@ -197,14 +196,16 @@ void initializeLcd(){
 }
 
 void initializeStepper(){
-  // Loop which will cycle 1150 times. There are ~ 1150 motor steps between fully closed and fully open throttle.
+  // Flagging that the throttle should open.
+  directionFlag = false;
+  // Loop which will cycle 1200 times. There are ~ 1200 motor steps between fully closed and fully open throttle.
   for (int steps = 0; steps < maxSteps; steps ++){
     // Rotating the motor one step.
     stepperMotor.step(directionFlag); 
-    // If the limit switch has been actiavted / throttle is completely closed.
+    // If the limit switch has been actiavted / throttle is wide open.
     if (digitalRead(limitSwitch) == LOW){
-      // Set the direction flag to false. This will case the stepper to open the throttle.
-      directionFlag = false;
+      // Set the direction flag to true. This will cause the stepper to close the throttle.
+      directionFlag = true;
       // Reset the number of steps remaining.
       steps = maxSteps - startupSteps;
     }    
