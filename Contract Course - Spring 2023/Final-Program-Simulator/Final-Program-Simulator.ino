@@ -1,17 +1,13 @@
 // Griffin White
-// 2-21-2023
+// 3-7-2023
 // Spring 2023 Contract Course
-// Engine Governor: PID Loop Control Test
+// Engine Governor: Final Program (Engine Simulator) - Version 1.00
 
-/*RESULTS:
- * 
- * Main Loop Time:  Min: 0 ms Max: 4 ms
- * 
- * This is acceptable. The program will need respond to a pulse every ~15 ms.
- * 
- * Simulator: (8 Magnets) * (500 RPM) = 4000 Pulse/Min -> 1 Pulse/15 ms
- * Engine:    (1 Magnet) * (3600 RPM) = 3600 Pulse/Min -> 1 Pulse/16.667 ms
- * 
+/* Version 1.00 Changes:
+ * * * * * * * * * * * *
+ * This is the inistial version of the final program for the engine simulator. 
+ * This code is identical to the "Test-PID-Loop" program.
+ * All future development for the simulator program will take place here, rather than "Test-PID-Loop".
  */
 
 
