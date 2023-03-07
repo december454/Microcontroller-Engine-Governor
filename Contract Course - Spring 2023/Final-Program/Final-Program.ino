@@ -1,13 +1,12 @@
 // Griffin White
-// 3-6-2023
+// 3-7-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program - Version 1.03
+// Engine Governor: Final Program - Version 1.04
 
-/* Version 1.03 Changes:
+/* Version 1.04 Changes:
  * * * * * * * * * * * *
- * Program now features different PID values for startup vs normal operation.
- * PID Tuning, tuning Kd gain.
- * Updated PID 'D' formula.
+ * Removed startup & normal operation PID gains from V 1.03.
+ * Reworked PID loop operation and "directionFlag" assignment. PID derivative calculations now function as intended.
  */
 
 #include <Wire.h>               // LCD library.
@@ -15,15 +14,11 @@
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-//const double Kp=.1, Ki=0, Kd=0; // V 1.02 
-const double KpS=.1, KiS=0, KdS=0;                // PID gain values for startup.
-const double KpN=.05, KiN=.003, KdN=0;            // PID gain values for normal operation.
+const double Kp=.1, Ki=0, Kd=0;                   // PID gain variables.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
-const int normalOpTime = 1500;                    // The minimum amount of time (ms) that the engine must maintain the desired RPM in order to switch out of startup mode.
-const int normalOpThreshold = 100;                // The maximum delta from the RPM setpoint which the engien must maintian to be switch out of startup mode.
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
 const int limitSwitch = 12;                       // Pin for the limit switch.
 const int desiredRpm = 3600;                      // Desired RPM.
@@ -38,7 +33,6 @@ const int in1 = 38, in2 = 40, in3 = 42, in4 = 44; // Pins for the stepper motor 
 const int vo = 9, rs = 13, en = 12, d4 = 11, d5 = 10, d6 = 8, d7 = 7; // Pins for the LCD.
 const String lcdHeader = " Set  | Curr RPM";  // Text header displayed during normal operation.
 
-double Kp=0, Ki=0, Kd=0;           // Current PID gains.
 double rpm = 0;                     // Current RPM.
 double rpmDiff = 0;                 // Difference between the current RPM and desired RPM.
 double rpmDiffPrev = 0;             // The rpmDiff value from the prior update. (Used for PID calculations.)
@@ -49,13 +43,11 @@ int stringIndex = 0;                // Current index within a String being print
 bool throttleRpmUpdated = false;    // If the RPM has just been calculated.
 bool directionFlag = true;          // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
 bool engineRunning = false;         // If the engine is running.
-bool normalOperation = false;       // IF the engine is maintaining the desired RPM and running normally, not starting up.
 String stringRpm = "0";             // String representation of the current rpm. 
 
 Timer timeElapsed(MILLIS);        // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS); // Timer object for updating the LCD.
 Timer pidTimeElapsed(MILLIS);     // Timer object for PID change-over-time calculations.
-Timer startupTimer(MILLIS);       // Timer object for tracking when to switch out of start-up mode.
 
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 
@@ -71,8 +63,6 @@ void setup() {
   
   initializeLcd();
   initializeStepper();
-
-  Kp=KpS, Ki=KiS, Kd=KdS; 
 }
 
 void loop() {
@@ -96,21 +86,10 @@ void loop() {
     // Flagging that the engine is running.
     engineRunning = true;
 
-  if (!normalOperation){
-    if (abs(rpmDiff) > normalOpThreshold)
-      startupTimer.start();
-    else if (startupTimer.read() > normalOpTime){
-      normalOperation = true;
-      Kp=KpN, Ki=KiN, Kd=KdN; 
-    }
-  }
-  
-
   // If there has not been a hall sensor pulse for some time and the engine was reported as running. (The engine has stalled / been shut off.)
   if (timeElapsed.read() > stallTimeout && engineRunning){
     // Flagging that the engine is no longer running.
     engineRunning = false;
-    normalOperation = false;
     // Setting the rpm to 0.
     rpm = 0;
     // Initializig the stepper motor, preparing for the engine to be restarted.
@@ -130,14 +109,6 @@ void calcRpm(){
   sensorActivations = 0;      // Resetting the number of sensor activations.
   timeElapsed.start();        // Resetting the timer.
   rpmDiff = desiredRpm - rpm; // Calculating the difference between the current RPM and desired RPM.  
-
-  // If the RPM is above the desired value.
-  if (rpmDiff < 0)
-    directionFlag = true;     // Setting the stepper motor direction to clockwise (decrease throttle).
-  
-  // Else the RPM is below the desired value.
-  else
-    directionFlag = false;    // Setting the stepper motor direction to counter-clockwise (increase throttle).
         
   throttleRpmUpdated = true;  // Flagging that the RPM was just updated.
 }
@@ -147,7 +118,7 @@ int calculatePid(){
   // Calculating Proportional Value: (P-Gain * RPM Difference)
   pidP = Kp * rpmDiff;
   // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
-  pidD = Kd * ((abs(rpmDiff) - abs(rpmDiffPrev)) / pidTimeElapsed.read());
+  pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
   // If the RPM is near the target and the integral calculation will have a meaningful effect.
   if (abs(rpmDiff) > rpmPrecisionI)
@@ -160,8 +131,17 @@ int calculatePid(){
   // Restarting the PID timer.
   pidTimeElapsed.start();
 
-  // Returning the total PID output.
-  return abs(pidP + pidI + pidD);    
+  // Finding the total of the functions.
+  int total = pidP + pidI + pidD;
+
+  // If the total is positive. (The throttle needs to increase.)
+  if (total >= 0)
+    directionFlag = false;        // Setting the stepper motor direction to counter-clockwise (increase throttle).
+  // Else the total is negative. (The throttle needs to decrease.)
+  else
+    directionFlag = true;         // Setting the stepper motor direction to clockwise (decrease throttle).
+  
+  return abs(total);  
 }
 
 // Method for adjusting the throttle.
@@ -189,8 +169,6 @@ void updateDisplay(){
     Serial.println(rpm);
     Serial.print("Steps Remaining: ");
     Serial.println(stepsRemaining);
-    Serial.print("Normal Operation: ");
-    Serial.println(normalOperation);
     
     displayUpdateTimer.start();    
   }
