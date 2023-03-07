@@ -14,6 +14,8 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Reinforce Stepper Motor Bracket~~ (Completed 3-3-2023)
 - ~~Secure Limit Switch~~ (Completed 3-3-2023)
 - Rewrite code so that the "directionFlag" is controlled by the PID output. (Allow kD to throttle down, if RPM is rapidly increasing but still below setpoint)
+- Add debugging info that outputs to serial on program startup.
+- Replace I2C LCD display with traditional 1602 LCD.
 - Add Main Power Switch
 - Add Stepper Power Switch
 - Improve Shutdown Behavior
