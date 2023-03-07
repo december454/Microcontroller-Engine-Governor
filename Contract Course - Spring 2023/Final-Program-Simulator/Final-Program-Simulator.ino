@@ -1,13 +1,12 @@
 // Griffin White
 // 3-7-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program (Engine Simulator) - Version 1.00
+// Engine Governor: Final Program (Engine Simulator) - Version 1.01
 
-/* Version 1.00 Changes:
+/* Version 1.01 Changes:
  * * * * * * * * * * * *
- * This is the inistial version of the final program for the engine simulator. 
- * This code is identical to the "Test-PID-Loop" program.
- * All future development for the simulator program will take place here, rather than "Test-PID-Loop".
+ * Reworked PID loop operation and "directionFlag" assignemnt. PID derivative calculations now function as intended.
+ * Cleaned up formatting, removed unused code.
  */
 
 
@@ -32,22 +31,12 @@ String stringRpm = "0";       // String representation of the current rpm.
 bool throttleRpmUpdated = false;
 boolean directionFlag = false; 
 
-
-double Kp=1.1, Ki=.001, Kd=0;        // PID variables.
-// double Kp=0, Ki=.005, Kd=0;        // PID variables.
-// double Kp=2, Ki=20, Kd=10;        // PID variables.
-// double Kp=15, Ki=1, Kd=1; 
-// double Kp=.0, Ki=0, Kd=2; 
-// double Kp=.000005, Ki=1, Kd=1; 
-// double Kp=.0002, Ki=.00055, Kd=.0001;     
+double Kp=1.1, Ki=.001, Kd=0;        // PID variables.  
 
 #include <Wire.h>               // LCD library.
 #include <LiquidCrystal_I2C.h>  // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
-
-#include "LiquidCrystal_I2C.h"
-LiquidCrystal_I2C i2cLcd(0x27,16,2); 
 
 Timer timeElapsed(MILLIS);      // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS);    // Timer object for updating the LCD.
@@ -63,12 +52,6 @@ void setup() {
   Serial.begin(9600);                   // Initializing serial output.
   displayUpdateTimer.start();                // Starting the display update timer.
   pidTimeElapsed.start();
-
-  
-  i2cLcd.init();                   
-  i2cLcd.backlight();
-
-  
 }
 
 void loop() {
@@ -106,14 +89,6 @@ void calcRpm(){
   timeElapsed.start();        // Resetting the timer.
   rpmDiff = desiredRpm - rpm; // Calculating the difference between the current RPM and desired RPM.  
 
-  // If the RPM is above the desired value.
-  if (rpmDiff < 0){
-    directionFlag = true;                         // Setting the stepper motor direction to clockwise (increase throttle).
-  }
-  // Else the RPM is below the desired value.
-  else{
-    directionFlag = false;                        // Setting the stepper motor direction to counter-clockwise (decrease throttle).
-  }      
   throttleRpmUpdated = true;  // Flagging that the RPM was just updated.
 }
 
@@ -132,10 +107,8 @@ void adjustThrottle(){
   }  
 }
 
-void countPulse(){
-      
-  sensorActivations++;      // Increment the number of sensorActivations.    
-  
+void countPulse(){      
+  sensorActivations++;      // Increment the number of sensorActivations.      
 }
 
 int calculatePid(){  
@@ -149,7 +122,14 @@ int calculatePid(){
   
   pidTimeElapsed.start();
 
-  return abs(pidP + pidI + pidD);    
+  int total = pidP + pidI + pidD;
+
+  if (total >= 0)
+    directionFlag = true;
+  else
+    directionFlag = false;
+  
+  return abs(total); 
 }
 
 // Method for updating the LCD display.
@@ -158,10 +138,10 @@ void updateDisplay(){
     stringIndex = 0;
     lcd.setCursor(8,1);
     displayUpdateTimer.start();   
-    Serial.print("Main Loop Time - Min: ") ;
-    Serial.print (minLoopTime);
-    Serial.print(" Max: ") ;
-    Serial.println (maxLoopTime);
+//    Serial.print("Main Loop Time - Min: ") ;
+//    Serial.print (minLoopTime);
+//    Serial.print(" Max: ") ;
+//    Serial.println (maxLoopTime);
     Serial.print("RPM: ");
     Serial.print(rpm);
     Serial.print(" Steps Remaining: ");
