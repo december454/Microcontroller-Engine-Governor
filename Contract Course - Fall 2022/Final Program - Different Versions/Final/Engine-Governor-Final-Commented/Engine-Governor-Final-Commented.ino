@@ -122,10 +122,10 @@ void adjustThrottle(){
 
   // If there are still stepper motor steps remaining.
   if (stepsRemaining > 0){
-    boolean directionFlag = false; // Setting the stepper motor direction to counterclockwise (decrease throttle).
-    // If the RPM difference is negative (too slow).
+    boolean directionFlag = false; // Setting the stepper motor direction to counterclockwise (increase throttle).
+    // If the RPM difference is positive (too fast).
     if (rpmDiff < 0)
-      directionFlag = true; // Setting the stepper motor direction to clockwise (increase throttle).
+      directionFlag = true; // Setting the stepper motor direction to clockwise (decrease throttle).
 
     stepperMotor.step(directionFlag); // Stepping in the desired direction.
     stepsRemaining--;                 // Decrementing the remaining steps.
