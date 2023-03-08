@@ -1,12 +1,11 @@
 // Griffin White
 // 3-7-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program (Engine Simulator) - Version 1.01
+// Engine Governor: Final Program (Engine Simulator) - Version 1.02
 
-/* Version 1.01 Changes:
+/* Version 1.02 Changes:
  * * * * * * * * * * * *
- * Reworked PID loop operation and "directionFlag" assignemnt. PID derivative calculations now function as intended.
- * Cleaned up formatting, removed unused code.
+ * Corrected "directionFlag" assignment. (true and false were swapped)
  */
 
 
@@ -125,9 +124,9 @@ int calculatePid(){
   int total = pidP + pidI + pidD;
 
   if (total >= 0)
-    directionFlag = true;
-  else
     directionFlag = false;
+  else
+    directionFlag = true;
   
   return abs(total); 
 }
