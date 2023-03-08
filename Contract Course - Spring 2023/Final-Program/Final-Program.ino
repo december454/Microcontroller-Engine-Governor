@@ -1,12 +1,12 @@
 // Griffin White
 // 3-8-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program - Version 1.05
+// Engine Governor: Final Program - Version 1.0
 
-/* Version 1.05 Changes:
+/* Version 1.06 Changes:
  * * * * * * * * * * * *
- * Controller now uses a traditional 1602 LCD display, instead of an I2C controlled LCD.
- * Program now uses the much quicker "LiquidCrystal" library instead of the "LiquidCrystal_I2C" library.
+ * Added switch to enable / disable the stepper motor.
+ * All calls to the "initializeStepper" function are now within the main loop. It will continuously be called until the stepper switch is turned on.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
@@ -19,6 +19,7 @@ const int startupSteps = 900;                     // The number of steps from wi
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
+const int stepperSwitchPin = 52;                  // Pin for stepper disable / enable switch.
 const int limitSwitch = 12;                       // Pin for the limit switch.
 const int desiredRpm = 3600;                      // Desired RPM.
 const int rpmPrecision = 2;                       // Acceptable discrepency between desired and actual RPM.
@@ -42,6 +43,7 @@ int stringIndex = 0;                // Current index within a String being print
 bool throttleRpmUpdated = false;    // If the RPM has just been calculated.
 bool directionFlag = true;          // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
 bool engineRunning = false;         // If the engine is running.
+bool stepperInitialized = false;    // If the stepper has been initialized.
 String stringRpm = "0";             // String representation of the current rpm. 
 
 Timer timeElapsed(MILLIS);        // Timer object for RPM calculations.
@@ -53,6 +55,7 @@ CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);               // LCD display object.
 
 void setup() {
+  pinMode(stepperSwitchPin,INPUT_PULLUP);    // Setting the stepperSwitchPin pinMode to INPUT_PULLUP.
   pinMode(hallSensorPin,INPUT_PULLUP);  // Setting the hallSensorPin pinMode to INPUT_PULLUP.
   pinMode(limitSwitch,INPUT_PULLUP);    // Setting the limitSwitch pinMode to INPUT_PULLUP.
   attachInterrupt(digitalPinToInterrupt(hallSensorPin),countPulse,FALLING); // Attctching an interrupt to the hallSensorPin.
@@ -71,7 +74,7 @@ void loop() {
   if (sensorActivations >= rpmCalcInterval)    
     calcRpm();
 
-  // If the current RPM is outside of the acceptable range.
+  // If the current RPM is outside of the acceptable range and above the minimum.
   if (abs(rpmDiff) > rpmPrecision && rpm > minRpm)
     adjustThrottle();
   else
@@ -87,12 +90,9 @@ void loop() {
     // Flagging that the engine is running.
     engineRunning = true;
 
-  // If there has not been a hall sensor pulse for some time and the engine was reported as running. (The engine has stalled / been shut off.)
-  if (timeElapsed.read() > stallTimeout && engineRunning){
-    // Flagging that the engine is no longer running.
-    engineRunning = false;
-    // Setting the rpm to 0.
-    rpm = 0;
+  // If the engine has not been started or it was running and has stopped.
+  if ((timeElapsed.read() > stallTimeout && engineRunning) || !stepperInitialized){
+
     // Initializig the stepper motor, preparing for the engine to be restarted.
     initializeStepper();
   }  
@@ -147,17 +147,22 @@ int calculatePid(){
 
 // Method for adjusting the throttle.
 void adjustThrottle(){
-  // If the RPM has been updated since the last method call, recalculate the number of stepper motor steps.
-  if (throttleRpmUpdated){
-    stepsRemaining = calculatePid();  // Set stepsRemaining equal to the output of the PID loop.
-    throttleRpmUpdated = false;       // Flagging that the new RPM has been acknowldged.
+  // If the stepper switch is turned on.
+  if (digitalRead(stepperSwitchPin) == LOW){
+    // If the RPM has been updated since the last method call, recalculate the number of stepper motor steps.
+    if (throttleRpmUpdated){
+      stepsRemaining = calculatePid();  // Set stepsRemaining equal to the output of the PID loop.
+      throttleRpmUpdated = false;       // Flagging that the new RPM has been acknowldged.
+    }
+  
+    // If there are stepper motor steps remaining, and it isn't attempting to open beyond wide-open.
+    if ((stepsRemaining > 0) && (directionFlag || digitalRead(limitSwitch) == HIGH)){      
+      stepperMotor.step(directionFlag); // Stepping in the desired direction.
+      stepsRemaining--;                 // Decrementing the remaining steps.
+      // Flagging that the stepper motor has been moved from its initial position.
+      stepperInitialized = false;
+    }
   }
-
-  // If there are stepper motor steps remaining, and it isn't attempting to open beyond wide-open.
-  if ((stepsRemaining > 0) && (directionFlag || digitalRead(limitSwitch) == HIGH)){      
-    stepperMotor.step(directionFlag); // Stepping in the desired direction.
-    stepsRemaining--;                 // Decrementing the remaining steps.
-  }  
 }
 
 // Method for updating the LCD display.
@@ -196,19 +201,28 @@ void initializeLcd(){
 }
 
 void initializeStepper(){
-  // Flagging that the throttle should open.
-  directionFlag = false;
-  // Loop which will cycle 1200 times. There are ~ 1200 motor steps between fully closed and fully open throttle.
-  for (int steps = 0; steps < maxSteps; steps ++){
-    // Rotating the motor one step.
-    stepperMotor.step(directionFlag); 
-    // If the limit switch has been actiavted / throttle is wide open.
-    if (digitalRead(limitSwitch) == LOW){
-      // Set the direction flag to true. This will cause the stepper to close the throttle.
-      directionFlag = true;
-      // Reset the number of steps remaining.
-      steps = maxSteps - startupSteps;
-    }    
+  // If the stepper switch is turned on.
+  if (digitalRead(stepperSwitchPin) == LOW){
+    // Flagging that the throttle should open.
+    directionFlag = false;
+    // Loop which will cycle 1200 times. There are ~ 1200 motor steps between fully closed and fully open throttle.
+    for (int steps = 0; steps < maxSteps; steps ++){
+      // Rotating the motor one step.
+      stepperMotor.step(directionFlag); 
+      // If the limit switch has been actiavted / throttle is wide open.
+      if (digitalRead(limitSwitch) == LOW){
+        // Set the direction flag to true. This will cause the stepper to close the throttle.
+        directionFlag = true;
+        // Reset the number of steps remaining.
+        steps = maxSteps - startupSteps;
+      }    
+    }
+    // Flagging that the engine is not running.
+    engineRunning = false;
+    // Setting the rpm to 0.
+    rpm = 0;
+    // Flagging that the stepper has been initialized.
+    stepperInitialized = true;
   }
 
   stepperMotor.stop();
