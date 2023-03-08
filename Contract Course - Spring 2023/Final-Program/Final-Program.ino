@@ -1,16 +1,15 @@
 // Griffin White
-// 3-7-2023
+// 3-8-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program - Version 1.04
+// Engine Governor: Final Program - Version 1.05
 
-/* Version 1.04 Changes:
+/* Version 1.05 Changes:
  * * * * * * * * * * * *
- * Removed startup & normal operation PID gains from V 1.03.
- * Reworked PID loop operation and "directionFlag" assignment. PID derivative calculations now function as intended.
+ * Controller now uses a traditional 1602 LCD display, instead of an I2C controlled LCD.
+ * Program now uses the much quicker "LiquidCrystal" library instead of the "LiquidCrystal_I2C" library.
  */
 
-#include <Wire.h>               // LCD library.
-#include <LiquidCrystal_I2C.h>  // LCD library.
+#include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
@@ -26,11 +25,11 @@ const int rpmPrecision = 2;                       // Acceptable discrepency betw
 const int rpmPrecisionI = rpmPrecision + 20;      // Descripency where PID integral tuning will come into play.
 const int numMagnets = 1;                         // Number of magnets on the flywheel.
 const int rpmCalcInterval = 8;                    // Number of revolutions between each RPM calculation.
-const int lcdContrast = 30;                       // Contrast value (0-255) for the LCD display.
-const int lcdUpdateInterval = 400;                // Update interval (ms) for the LCD display.
 const int lcdChar = 16, lcdRow = 2;               // LCD display dimensions.
+const int lcdContrast = 90;                       // Contrast value (0-255) for the LCD display.
+const int lcdUpdateInterval = 400;                // Update interval (ms) for the LCD display.
 const int in1 = 38, in2 = 40, in3 = 42, in4 = 44; // Pins for the stepper motor driver.
-const int vo = 9, rs = 13, en = 12, d4 = 11, d5 = 10, d6 = 8, d7 = 7; // Pins for the LCD.
+const int vo = 9, rs = 8, en = 7, d4 = 6, d5 = 5, d6 = 4, d7 = 3; // Pins for the LCD.
 const String lcdHeader = " Set  | Curr RPM";  // Text header displayed during normal operation.
 
 double rpm = 0;                     // Current RPM.
@@ -51,13 +50,15 @@ Timer pidTimeElapsed(MILLIS);     // Timer object for PID change-over-time calcu
 
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 
-LiquidCrystal_I2C lcd(0x27,16,2);               // LCD display object.
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);               // LCD display object.
 
 void setup() {
   pinMode(hallSensorPin,INPUT_PULLUP);  // Setting the hallSensorPin pinMode to INPUT_PULLUP.
   pinMode(limitSwitch,INPUT_PULLUP);    // Setting the limitSwitch pinMode to INPUT_PULLUP.
   attachInterrupt(digitalPinToInterrupt(hallSensorPin),countPulse,FALLING); // Attctching an interrupt to the hallSensorPin.
   Serial.begin(9600);                   // Initializing serial output.
+  analogWrite(vo, lcdContrast);         // Setting the LCD contrast.
+  lcd.begin(lcdChar, lcdRow);           // Initializing the LCD display.
   displayUpdateTimer.start();           // Starting the display update timer.
   pidTimeElapsed.start();               // Starting the PID derivative timer.
   
@@ -184,8 +185,6 @@ void updateDisplay(){
 }
 
 void initializeLcd(){
-  lcd.init();
-  lcd.backlight();
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(lcdHeader);
