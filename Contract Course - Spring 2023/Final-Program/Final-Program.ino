@@ -3,13 +3,10 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.07";
-/* Version 1.07 Changes:
+const String version = "1.08";
+/* Version 1.09 Changes:
  * * * * * * * * * * * *
- * Added debug info which prints to serial upon system startup.
- * Program now outputs comma separated values of time, RPM, steps, & PID variables via serial throughout operation; this is intended for data logging..
- * Serial baud rate increased from 9600 to 115200.
- * Removed old serial output code from "updateDisplay" function.
+ * Corrected major bug with "initializeStepper" function call. Program would repeatedly call this function while engine was running. This has been resolved.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
@@ -71,6 +68,7 @@ void setup() {
   pidTimeElapsed.start();                     // Starting the PID derivative timer.
   serialOutputTimer.start();                  // Starting the serial output timer.
   
+  printDebugInfo();
   initializeLcd();
   initializeStepper();
 }
@@ -102,7 +100,7 @@ void loop() {
     engineRunning = true;
 
   // If the engine has not been started or it was running and has stopped.
-  if ((timeElapsed.read() > stallTimeout && engineRunning) || !stepperInitialized){
+  if ((timeElapsed.read() > stallTimeout && engineRunning) || (!stepperInitialized && ! engineRunning)){
     // Initializig the stepper motor, preparing for the engine to be restarted.
     initializeStepper();
   }  
@@ -237,7 +235,10 @@ void serialOutput(){
   Serial.print(',');
   Serial.print(rpm);
   Serial.print(',');
-  Serial.print(stepsRemaining);
+  if (directionFlag)
+    Serial.print(stepsRemaining * -1);
+  else
+    Serial.print(stepsRemaining * -1);
   Serial.print(',');
   Serial.print(pidP);
   Serial.print(',');
