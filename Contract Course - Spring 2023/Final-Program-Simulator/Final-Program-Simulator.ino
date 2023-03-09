@@ -1,11 +1,15 @@
 // Griffin White
-// 3-7-2023
+// 3-9-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program (Engine Simulator) - Version 1.02
+// Engine Governor: Final Program (Engine Simulator) - Version 1.03
 
-/* Version 1.02 Changes:
+const String version = "1.03";
+/* Version 1.03 Changes:
  * * * * * * * * * * * *
- * Corrected "directionFlag" assignment. (true and false were swapped)
+ * Added debug info which prints to serial upon system startup.
+ * Program now outputs comma separated values of time, RPM, steps, & PID variables via serial throughout operation.
+ * Serial baud rate increased from 9600 to 115200.
+ * Added extra constants from the "Final-Program" so that the debug info is can output in the same format.
  */
 
 
@@ -14,6 +18,12 @@ const int numMagnets = 8;                     // Number of magnets on the flywhe
 const int rpmPrecision = 2;                   // Acceptable discrepency between desired and actual RPM.
 const int in1 = 3, in2 = 4, in3 = 5, in4 = 6; // Pins for the stepper motor driver.
 const int updateInterval = 8;                 // Number of pulses between each calculation of the RPM.
+const int minRpm = 300;   
+const int startupSteps = 900;   
+const int rpmPrecisionI = rpmPrecision + 20;
+const int maxSteps = 1200; 
+const int serialUpdateInterval = 100;             // Update interval (ms) for the serial output.
+const int lcdUpdateInterval = 400;  
 
 int pidP = 0, pidI = 0, pidD = 0;
 
@@ -26,6 +36,7 @@ int stepsRemaining = 0;       // Number of stepper motor steps remaining.
 int stringIndex = 0;          // Current index within a String being printed to the LCD display.
 int minLoopTime = 9999;
 int maxLoopTime = 0;
+int serialOutputTimePrev = 0;
 String stringRpm = "0";       // String representation of the current rpm. 
 bool throttleRpmUpdated = false;
 boolean directionFlag = false; 
@@ -41,6 +52,8 @@ Timer timeElapsed(MILLIS);      // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS);    // Timer object for updating the LCD.
 Timer pidTimeElapsed(MILLIS);
 Timer loopTime(MILLIS);
+Timer serialUpdateTimer(MILLIS);
+Timer serialOutputTimer(MILLIS);
 
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 LiquidCrystal_I2C lcd(0x27,20,4);               // LCD Object.
@@ -48,9 +61,11 @@ LiquidCrystal_I2C lcd(0x27,20,4);               // LCD Object.
 void setup() {
   pinMode(hallSensorPin,INPUT_PULLUP);  // Setting the hallSensorPin pinMode to INPUT_PULLUP.
   attachInterrupt(digitalPinToInterrupt(hallSensorPin),countPulse,FALLING); // Attctching an interrupt to the hallSensorPin.
-  Serial.begin(9600);                   // Initializing serial output.
+  Serial.begin(115200);                   // Initializing serial output.
   displayUpdateTimer.start();                // Starting the display update timer.
   pidTimeElapsed.start();
+  serialOutputTimer.start();
+  printDebugInfo();
 }
 
 void loop() {
@@ -64,15 +79,21 @@ void loop() {
     adjustThrottle();
   else
     stepperMotor.stop();
+//
+//  if(displayUpdateTimer.read() >= 400){
+//    //Serial.print("RPM: ");
+//    //Serial.println(rpm);
+//    //Serial.print("Steps Remaining: ");
+//    //Serial.println(stepsRemaining);
+//    //displayUpdate.start();    
+//    updateDisplay();
+//  }
 
-  if(displayUpdateTimer.read() >= 400){
-    //Serial.print("RPM: ");
-    //Serial.println(rpm);
-    //Serial.print("Steps Remaining: ");
-    //Serial.println(stepsRemaining);
-    //displayUpdate.start();    
-    updateDisplay();
+  if (serialOutputTimer.read() >= serialUpdateInterval){
+    serialOutput();
+    serialOutputTimer.start();
   }
+  
 
   if (loopTime.read() > maxLoopTime)
     maxLoopTime = loopTime.read();
@@ -141,10 +162,10 @@ void updateDisplay(){
 //    Serial.print (minLoopTime);
 //    Serial.print(" Max: ") ;
 //    Serial.println (maxLoopTime);
-    Serial.print("RPM: ");
-    Serial.print(rpm);
-    Serial.print(" Steps Remaining: ");
-    Serial.println(stepsRemaining);
+//    Serial.print("RPM: ");
+//    Serial.print(rpm);
+//    Serial.print(" Steps Remaining: ");
+//    Serial.println(stepsRemaining);
     displayUpdateTimer.start();  
   }
   else{
@@ -155,4 +176,36 @@ void updateDisplay(){
     lcd.print(stringRpm.charAt(stringIndex));
     stringIndex++;     
   }    
+}
+
+void serialOutput(){
+  Serial.print(millis());
+  Serial.print(',');
+  Serial.print(rpm);
+  Serial.print(',');
+  Serial.print(stepsRemaining);
+  Serial.print(',');
+  Serial.print(pidP);
+  Serial.print(',');
+  Serial.print(pidI);
+  Serial.print(',');
+  Serial.println(pidD);
+}
+
+void printDebugInfo(){
+  Serial.println ((String)"------ Microcontroller Engine Governor - Version: " + version + " ------");
+  Serial.println ("-------------------------------------------------------------");
+  Serial.println ((String)"PID Gains:        Kp: " + Kp + "       Ki: " + Ki + "       Kd: " + Kd);
+  Serial.println ("-------------------------------------------------------------");
+  Serial.println ((String)"Set RPM:             " + desiredRpm        + "  |  Min RPM:                " + minRpm);
+  Serial.println ("                             |");
+  Serial.println ((String)"RPM Precision        " + rpmPrecision      + "       |  PID I Precision:         " + rpmPrecisionI);
+  Serial.println ("                             |");
+  Serial.println ((String)"Start Steps:         " + startupSteps      + "     |  Max Steps:               " + maxSteps);
+  Serial.println ("                             |");
+  Serial.println ((String)"RPM Calc Interval:   " + updateInterval    + "       |  Num Magnets:             " + numMagnets);
+  Serial.println ("                             |");
+  Serial.println ((String)"LCD Update Interval: " + lcdUpdateInterval + "     |  Serial Update Interval:  " + serialUpdateInterval);
+  Serial.println ("-------------------------------------------------------------\n");
+  Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID i, PID d");
 }
