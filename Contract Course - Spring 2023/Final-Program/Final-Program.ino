@@ -1,12 +1,15 @@
 // Griffin White
 // 3-8-2023
 // Spring 2023 Contract Course
-// Engine Governor: Final Program - Version 1.0
+// Engine Governor: Final Program
 
-/* Version 1.06 Changes:
+const String version = "1.07";
+/* Version 1.07 Changes:
  * * * * * * * * * * * *
- * Added switch to enable / disable the stepper motor.
- * All calls to the "initializeStepper" function are now within the main loop. It will continuously be called until the stepper switch is turned on.
+ * Added debug info which prints to serial upon system startup.
+ * Program now outputs comma separated values of time, RPM, steps, & PID variables via serial throughout operation; this is intended for data logging..
+ * Serial baud rate increased from 9600 to 115200.
+ * Removed old serial output code from "updateDisplay" function.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
@@ -29,6 +32,7 @@ const int rpmCalcInterval = 8;                    // Number of revolutions betwe
 const int lcdChar = 16, lcdRow = 2;               // LCD display dimensions.
 const int lcdContrast = 90;                       // Contrast value (0-255) for the LCD display.
 const int lcdUpdateInterval = 400;                // Update interval (ms) for the LCD display.
+const int serialUpdateInterval = 100;             // Update interval (ms) for the serial output.  
 const int in1 = 38, in2 = 40, in3 = 42, in4 = 44; // Pins for the stepper motor driver.
 const int vo = 9, rs = 8, en = 7, d4 = 6, d5 = 5, d6 = 4, d7 = 3; // Pins for the LCD.
 const String lcdHeader = " Set  | Curr RPM";  // Text header displayed during normal operation.
@@ -49,21 +53,23 @@ String stringRpm = "0";             // String representation of the current rpm.
 Timer timeElapsed(MILLIS);        // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS); // Timer object for updating the LCD.
 Timer pidTimeElapsed(MILLIS);     // Timer object for PID change-over-time calculations.
+Timer serialOutputTimer(MILLIS);  // Timer object for serial output.
 
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
 
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);               // LCD display object.
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);      // LCD display object.
 
 void setup() {
-  pinMode(stepperSwitchPin,INPUT_PULLUP);    // Setting the stepperSwitchPin pinMode to INPUT_PULLUP.
-  pinMode(hallSensorPin,INPUT_PULLUP);  // Setting the hallSensorPin pinMode to INPUT_PULLUP.
-  pinMode(limitSwitch,INPUT_PULLUP);    // Setting the limitSwitch pinMode to INPUT_PULLUP.
+  pinMode(stepperSwitchPin,INPUT_PULLUP);     // Setting the stepperSwitchPin pinMode to INPUT_PULLUP.
+  pinMode(hallSensorPin,INPUT_PULLUP);        // Setting the hallSensorPin pinMode to INPUT_PULLUP.
+  pinMode(limitSwitch,INPUT_PULLUP);          // Setting the limitSwitch pinMode to INPUT_PULLUP.
   attachInterrupt(digitalPinToInterrupt(hallSensorPin),countPulse,FALLING); // Attctching an interrupt to the hallSensorPin.
-  Serial.begin(9600);                   // Initializing serial output.
-  analogWrite(vo, lcdContrast);         // Setting the LCD contrast.
-  lcd.begin(lcdChar, lcdRow);           // Initializing the LCD display.
-  displayUpdateTimer.start();           // Starting the display update timer.
-  pidTimeElapsed.start();               // Starting the PID derivative timer.
+  Serial.begin(115200);                       // Initializing serial output.
+  analogWrite(vo, lcdContrast);               // Setting the LCD contrast.
+  lcd.begin(lcdChar, lcdRow);                 // Initializing the LCD display.
+  displayUpdateTimer.start();                 // Starting the display update timer.
+  pidTimeElapsed.start();                     // Starting the PID derivative timer.
+  serialOutputTimer.start();                  // Starting the serial output timer.
   
   initializeLcd();
   initializeStepper();
@@ -85,6 +91,11 @@ void loop() {
     updateDisplay();
   }
 
+  // If it is time to print the serial output.
+  if (serialOutputTimer.read() >= serialUpdateInterval){
+    serialOutput();
+  }
+
   // If the rpm has risen above the minRpm. (The engine has started.)
   if (rpm > minRpm)
     // Flagging that the engine is running.
@@ -92,7 +103,6 @@ void loop() {
 
   // If the engine has not been started or it was running and has stopped.
   if ((timeElapsed.read() > stallTimeout && engineRunning) || !stepperInitialized){
-
     // Initializig the stepper motor, preparing for the engine to be restarted.
     initializeStepper();
   }  
@@ -137,10 +147,10 @@ int calculatePid(){
 
   // If the total is positive. (The throttle needs to increase.)
   if (total >= 0)
-    directionFlag = false;        // Setting the stepper motor direction to counter-clockwise (increase throttle).
+    directionFlag = false;        // Setting the stepper motor direction to clockwise (increase throttle).
   // Else the total is negative. (The throttle needs to decrease.)
   else
-    directionFlag = true;         // Setting the stepper motor direction to clockwise (decrease throttle).
+    directionFlag = true;         // Setting the stepper motor direction to counter-clockwise (decrease throttle).
   
   return abs(total);  
 }
@@ -170,12 +180,6 @@ void updateDisplay(){
   if (stringIndex == 7){
     stringIndex = 0;
     lcd.setCursor(8,1);
-
-    Serial.print("RPM: ");
-    Serial.println(rpm);
-    Serial.print("Steps Remaining: ");
-    Serial.println(stepsRemaining);
-    
     displayUpdateTimer.start();    
   }
   else{
@@ -184,8 +188,7 @@ void updateDisplay(){
     }
       
     lcd.print(stringRpm.charAt(stringIndex));
-    stringIndex++;   
-     
+    stringIndex++;        
   }    
 }
 
@@ -226,4 +229,37 @@ void initializeStepper(){
   }
 
   stepperMotor.stop();
+}
+
+void serialOutput(){
+  serialOutputTimer.start();
+  Serial.print(millis());
+  Serial.print(',');
+  Serial.print(rpm);
+  Serial.print(',');
+  Serial.print(stepsRemaining);
+  Serial.print(',');
+  Serial.print(pidP);
+  Serial.print(',');
+  Serial.print(pidI);
+  Serial.print(',');
+  Serial.println(pidD);
+}
+
+void printDebugInfo(){
+  Serial.println ((String)"------ Microcontroller Engine Governor - Version: " + version + " ------");
+  Serial.println ("-------------------------------------------------------------");
+  Serial.println ((String)"PID Gains:        Kp: " + Kp + "       Ki: " + Ki + "       Kd: " + Kd);
+  Serial.println ("-------------------------------------------------------------");
+  Serial.println ((String)"Set RPM:             " + ((int)desiredRpm)        + "    |  Min RPM:                " + minRpm);
+  Serial.println ("                             |");
+  Serial.println ((String)"RPM Precision        " + rpmPrecision      + "       |  PID I Precision:         " + rpmPrecisionI);
+  Serial.println ("                             |");
+  Serial.println ((String)"Start Steps:         " + startupSteps      + "     |  Max Steps:               " + maxSteps);
+  Serial.println ("                             |");
+  Serial.println ((String)"RPM Calc Interval:   " + rpmCalcInterval    + "       |  Num Magnets:             " + numMagnets);
+  Serial.println ("                             |");
+  Serial.println ((String)"LCD Update Interval: " + lcdUpdateInterval + "     |  Serial Update Interval:  " + serialUpdateInterval);
+  Serial.println ("-------------------------------------------------------------\n");
+  Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID i, PID d");
 }
