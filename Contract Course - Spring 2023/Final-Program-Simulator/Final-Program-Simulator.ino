@@ -3,13 +3,10 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program (Engine Simulator) - Version 1.03
 
-const String version = "1.03";
-/* Version 1.03 Changes:
+const String version = "1.04";
+/* Version 1.04 Changes:
  * * * * * * * * * * * *
- * Added debug info which prints to serial upon system startup.
- * Program now outputs comma separated values of time, RPM, steps, & PID variables via serial throughout operation.
- * Serial baud rate increased from 9600 to 115200.
- * Added extra constants from the "Final-Program" so that the debug info is can output in the same format.
+ * RPM calculation timer (timeElapsed) now uses microseconds instead of milliseconds. Significant precision improvement.
  */
 
 
@@ -48,7 +45,7 @@ double Kp=1.1, Ki=.001, Kd=0;        // PID variables.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-Timer timeElapsed(MILLIS);      // Timer object for RPM calculations.
+Timer timeElapsed(MICROS);      // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS);    // Timer object for updating the LCD.
 Timer pidTimeElapsed(MILLIS);
 Timer loopTime(MILLIS);
@@ -103,8 +100,8 @@ void loop() {
 
 // Method for calculating the average RPM after a specified number of revolutions.
 void calcRpm(){
-  // Calculating RPM: (sensor pulses / (time elapsed * 60 sec * 1000 ms)) / number of magnets on flywheel.
-  rpm = (((double)sensorActivations / timeElapsed.read()) * 60000) / numMagnets;
+  // Calculating RPM: (sensor pulses / (time elapsed * 60 sec * 1000000 μs)) / number of magnets on flywheel.
+  rpm = (((double)sensorActivations / timeElapsed.read()) * 60000000) / numMagnets;
   sensorActivations = 0;      // Resetting the number of sensor activations.
   timeElapsed.start();        // Resetting the timer.
   rpmDiff = desiredRpm - rpm; // Calculating the difference between the current RPM and desired RPM.  
@@ -193,7 +190,7 @@ void serialOutput(){
 }
 
 void printDebugInfo(){
-  Serial.println ((String)"------ Microcontroller Engine Governor - Version: " + version + " ------");
+  Serial.println ((String)"------- Microcontroller Governor Sim -- Version: " + version + " -------");
   Serial.println ("-------------------------------------------------------------");
   Serial.println ((String)"PID Gains:        Kp: " + Kp + "       Ki: " + Ki + "       Kd: " + Kd);
   Serial.println ("-------------------------------------------------------------");
