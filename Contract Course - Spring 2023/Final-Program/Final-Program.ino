@@ -3,20 +3,18 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.09";
-/* Version 1.09 Changes:
+const String version = "1.10";
+/* Version 1.10 Changes:
  * * * * * * * * * * * *
- * PID Tuning.
- * Changed "rpmCalcINterval" from 8 to 1. RPM is now calculated at each flywheel rotation.
- * Changed "serialUpdateInterval" from 100 ms to 50 ms.
- * Improved formatting for PID gain in debug output.
+ * PID Tuning. Currently only PID P is active.
+ * RPM calculation timer (timeElapsed) now uses microseconds instead of milliseconds. Significant precision improvement.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.008, Ki=0, Kd=1;                 // PID gain variables.
+const double Kp=.01, Ki=0, Kd=0;                 // PID gain variables.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
@@ -50,7 +48,7 @@ bool engineRunning = false;         // If the engine is running.
 bool stepperInitialized = false;    // If the stepper has been initialized.
 String stringRpm = "0";             // String representation of the current rpm. 
 
-Timer timeElapsed(MILLIS);        // Timer object for RPM calculations.
+Timer timeElapsed(MICROS);        // Timer object for RPM calculations.
 Timer displayUpdateTimer(MILLIS); // Timer object for updating the LCD.
 Timer pidTimeElapsed(MILLIS);     // Timer object for PID change-over-time calculations.
 Timer serialOutputTimer(MILLIS);  // Timer object for serial output.
@@ -103,7 +101,7 @@ void loop() {
     engineRunning = true;
 
   // If the engine has not been started or it was running and has stopped.
-  if ((timeElapsed.read() > stallTimeout && engineRunning) || (!stepperInitialized && ! engineRunning)){
+  if ((timeElapsed.read() / 1000 > stallTimeout && engineRunning) || (!stepperInitialized && !engineRunning)){
     // Initializig the stepper motor, preparing for the engine to be restarted.
     initializeStepper();
   }  
@@ -116,8 +114,8 @@ void countPulse(){
 
 // Method for calculating the average RPM after a specified number of revolutions.
 void calcRpm(){
-  // Calculating RPM: (sensor pulses / (time elapsed * 60 sec * 1000 ms)) / number of magnets on flywheel.
-  rpm = (((double)sensorActivations / timeElapsed.read()) * 60000) / numMagnets;
+  // Calculating RPM: (sensor pulses / (time elapsed * 60 sec * 1000000 microseconds)) / number of magnets on flywheel.
+  rpm = (((double)sensorActivations / timeElapsed.read()) * 60000000) / numMagnets;
   sensorActivations = 0;      // Resetting the number of sensor activations.
   timeElapsed.start();        // Resetting the timer.
   rpmDiffPrev = rpmDiff;
