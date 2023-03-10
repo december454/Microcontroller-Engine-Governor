@@ -3,17 +3,20 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.08";
+const String version = "1.09";
 /* Version 1.09 Changes:
  * * * * * * * * * * * *
- * Corrected major bug with "initializeStepper" function call. Program would repeatedly call this function while engine was running. This has been resolved.
+ * PID Tuning.
+ * Changed "rpmCalcINterval" from 8 to 1. RPM is now calculated at each flywheel rotation.
+ * Changed "serialUpdateInterval" from 100 ms to 50 ms.
+ * Improved formatting for PID gain in debug output.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.1, Ki=0, Kd=0;                   // PID gain variables.
+const double Kp=.008, Ki=0, Kd=1;                 // PID gain variables.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
@@ -25,11 +28,11 @@ const int desiredRpm = 3600;                      // Desired RPM.
 const int rpmPrecision = 2;                       // Acceptable discrepency between desired and actual RPM.
 const int rpmPrecisionI = rpmPrecision + 20;      // Descripency where PID integral tuning will come into play.
 const int numMagnets = 1;                         // Number of magnets on the flywheel.
-const int rpmCalcInterval = 8;                    // Number of revolutions between each RPM calculation.
+const int rpmCalcInterval = 1;                    // Number of revolutions between each RPM calculation.
 const int lcdChar = 16, lcdRow = 2;               // LCD display dimensions.
 const int lcdContrast = 90;                       // Contrast value (0-255) for the LCD display.
 const int lcdUpdateInterval = 400;                // Update interval (ms) for the LCD display.
-const int serialUpdateInterval = 100;             // Update interval (ms) for the serial output.  
+const int serialUpdateInterval = 50;              // Update interval (ms) for the serial output.  
 const int in1 = 38, in2 = 40, in3 = 42, in4 = 44; // Pins for the stepper motor driver.
 const int vo = 9, rs = 8, en = 7, d4 = 6, d5 = 5, d6 = 4, d7 = 3; // Pins for the LCD.
 const String lcdHeader = " Set  | Curr RPM";  // Text header displayed during normal operation.
@@ -117,6 +120,7 @@ void calcRpm(){
   rpm = (((double)sensorActivations / timeElapsed.read()) * 60000) / numMagnets;
   sensorActivations = 0;      // Resetting the number of sensor activations.
   timeElapsed.start();        // Resetting the timer.
+  rpmDiffPrev = rpmDiff;
   rpmDiff = desiredRpm - rpm; // Calculating the difference between the current RPM and desired RPM.  
         
   throttleRpmUpdated = true;  // Flagging that the RPM was just updated.
@@ -142,6 +146,7 @@ int calculatePid(){
 
   // Finding the total of the functions.
   int total = pidP + pidI + pidD;
+  // int total = pidP;
 
   // If the total is positive. (The throttle needs to increase.)
   if (total >= 0)
@@ -238,7 +243,7 @@ void serialOutput(){
   if (directionFlag)
     Serial.print(stepsRemaining * -1);
   else
-    Serial.print(stepsRemaining * -1);
+    Serial.print(stepsRemaining);
   Serial.print(',');
   Serial.print(pidP);
   Serial.print(',');
@@ -250,8 +255,15 @@ void serialOutput(){
 void printDebugInfo(){
   Serial.println ((String)"------ Microcontroller Engine Governor - Version: " + version + " ------");
   Serial.println ("-------------------------------------------------------------");
-  Serial.println ((String)"PID Gains:        Kp: " + Kp + "       Ki: " + Ki + "       Kd: " + Kd);
-  Serial.println ("-------------------------------------------------------------");
+  
+  Serial.print   ((String)"PID Gains:        Kp: ");
+  Serial.print   (Kp, 6);
+  Serial.print   ("   Ki: ");
+  Serial.print   (Ki, 6);
+  Serial.print   ("   Kd: ");
+  Serial.print   (Kd, 6);
+  
+  Serial.println ("\n-------------------------------------------------------------");
   Serial.println ((String)"Set RPM:             " + ((int)desiredRpm)        + "    |  Min RPM:                " + minRpm);
   Serial.println ("                             |");
   Serial.println ((String)"RPM Precision        " + rpmPrecision      + "       |  PID I Precision:         " + rpmPrecisionI);
