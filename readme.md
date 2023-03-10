@@ -15,10 +15,11 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Secure Limit Switch~~ (Completed 3-3-2023)
 - ~~Rewrite code so that the "directionFlag" is controlled by the PID output.~~ (Completed 3-7-2023)
 - ~~Add debugging info that outputs to serial on program startup.~~ (Completed 3-9-2023)
-- Test lowering the RPM Calc Interval.
+- ~~Test lowering the RPM Calc Interval.~~ (Completed 3-9-2023)
 - ~~Replace I2C LCD display with traditional 1602 LCD.~~ (Completed 3-8-2023)
 - ~~Add Main Power Switch.~~ (Completed 3-8-2023)
 - ~~Add Stepper Power Switch.~~ (Completed 3-8-2023)
+- Change RPM calc timer (timeElapsed) from milliseconds to microseconds.
 - Improve Shutdown Behavior
 - Improve Data Logging.
 - Tune PID Loop
