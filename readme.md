@@ -24,3 +24,4 @@ Additionally, this project will document the design / fabrication process of cre
 - Improve Data Logging.
 - Tune PID Loop
 - Add more useful info to readme.
+- Repurpose the Stepper on/off switch to function as a kill switch.
