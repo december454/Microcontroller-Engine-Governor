@@ -19,7 +19,7 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Replace I2C LCD display with traditional 1602 LCD.~~ (Completed 3-8-2023)
 - ~~Add Main Power Switch.~~ (Completed 3-8-2023)
 - ~~Add Stepper Power Switch.~~ (Completed 3-8-2023)
-- Change RPM calc timer (timeElapsed) from milliseconds to microseconds.
+- ~~Change RPM calc timer (timeElapsed) from milliseconds to microseconds.~~ (Completed 3-10-2023)
 - Improve Shutdown Behavior
 - Improve Data Logging.
 - Tune PID Loop
