@@ -3,18 +3,18 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.10";
-/* Version 1.10 Changes:
+const String version = "1.11";
+/* Version 1.11 Changes:
  * * * * * * * * * * * *
- * PID Tuning. Currently only PID P is active.
- * RPM calculation timer (timeElapsed) now uses microseconds instead of milliseconds. Significant precision improvement.
+ * PID Tuning. Dynamic D gain.
+ * PID D gain becomes less aggressive as the RPM approaches the setpoint.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.01, Ki=0, Kd=0;                 // PID gain variables.
+const double Kp=.01, Ki=0, Kd=3;                  // PID gain variables.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
@@ -128,8 +128,14 @@ void calcRpm(){
 int calculatePid(){  
   // Calculating Proportional Value: (P-Gain * RPM Difference)
   pidP = Kp * rpmDiff;
+
+
+  
   // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
-  pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+  if (abs(rpmDiff) <= 100)
+    pidD = ((Kd * (rpmDiff * rpmDiff)/1000)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+  else
+    pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
   // If the RPM is near the target and the integral calculation will have a meaningful effect.
   if (abs(rpmDiff) > rpmPrecisionI)
