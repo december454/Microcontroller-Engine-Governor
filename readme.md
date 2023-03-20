@@ -1,4 +1,12 @@
-# Microcontroller-Engine-Governor: Abstract
+# Microcontroller-Engine-Governor:
+## Quick Links:
+- [Test Run Videos](https://drive.google.com/drive/folders/1vf2UiMMJDWpa3UTO7wDQ3YrPN7G2oo9Z?usp=sharing)
+- [Program - Spring 2023](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Contract%20Course%20-%20Spring%202023/Final-Program/Final-Program.ino)
+- [Program - Fall 2022](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Contract%20Course%20-%20Fall%202022/Final%20Program%20-%20Different%20Versions/Final/Engine-Governor-Final-Commented/Engine-Governor-Final-Commented.ino)
+- [Final Report - Fall 2022](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Final%20Reports/Microcontroller%20Based%20Engine%20Governor%20Simulator%20-%20Fall%202022.pdf)
+
+
+## Abstract
 Many internal combustion engines are designed to run at a constant, specified RPM. This is particularly common in small gasoline engines, such as those found in lawnmowers, generators, snow-blowers, etc. In these cases, the device must run at a specific speed to function properly. For example, a generator’s RPM is tied to the voltage which it outputs.
 
 To maintain a specified RPM, engines utilize a governor. This is a mechanical or electronic device which regulates the engine’s throttle. If the RPM begins to drop below the set value, the governor will open the throttle more, causing the engine to speed up. If the RPM begins to rise above the set value, the governor will close the throttle, causing the engine to slow down. This is analogous to cruise-control in a car.
@@ -19,8 +27,9 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Replace I2C LCD display with traditional 1602 LCD.~~ (Completed 3-8-2023)
 - ~~Add Main Power Switch.~~ (Completed 3-8-2023)
 - ~~Add Stepper Power Switch.~~ (Completed 3-8-2023)
-- Change RPM calc timer (timeElapsed) from milliseconds to microseconds.
+- ~~Change RPM calc timer (timeElapsed) from milliseconds to microseconds.~~ (Completed 3-10-2023)
 - Improve Shutdown Behavior
 - Improve Data Logging.
 - Tune PID Loop
 - Add more useful info to readme.
+- Repurpose the Stepper on/off switch to function as a kill switch.
