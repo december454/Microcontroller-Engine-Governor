@@ -3,11 +3,12 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.11";
-/* Version 1.11 Changes:
+const String version = "1.12";
+/* Version 1.12 Changes:
  * * * * * * * * * * * *
- * PID Tuning. Dynamic D gain.
- * PID D gain becomes less aggressive as the RPM approaches the setpoint.
+ * PID Tuning. 
+ * Improved dynamic D gain.
+ * D gain remains constant while rpmDiff >= 300, decreases while rpmDiff >= 200, and then is set to zero while rpmDiff < 200.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
@@ -132,8 +133,12 @@ int calculatePid(){
 
   
   // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
-  if (abs(rpmDiff) <= 100)
-    pidD = ((Kd * (rpmDiff * rpmDiff)/1000)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+  if (abs(rpmDiff) <= 300){
+    if (rpmDiff <= 200)
+      pidD = 0;
+    else
+      pidD = ((Kd * ((rpmDiff - 200) * (rpmDiff - 100))/10000)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+  }
   else
     pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
