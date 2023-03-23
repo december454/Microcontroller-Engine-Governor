@@ -28,6 +28,7 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Add Main Power Switch.~~ (Completed 3-8-2023)
 - ~~Add Stepper Power Switch.~~ (Completed 3-8-2023)
 - ~~Change RPM calc timer (timeElapsed) from milliseconds to microseconds.~~ (Completed 3-10-2023)
+- ~~Add Spring to Pre-Load Stepper Gearbox~~ (Completed 3-22-2023)
 - Improve Shutdown Behavior
 - Improve Data Logging.
 - Tune PID Loop
