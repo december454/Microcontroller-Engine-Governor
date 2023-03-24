@@ -18,16 +18,20 @@ This project will explore these benefits and measure how much of an improvement 
 Additionally, this project will document the design / fabrication process of creating the computerized governor. This will provide valuable insight on engine control theory and engine electronics.
 
 ## Testing Methodology:
-### Original Mechanical Governor:
+### Mechanical Governor:
 - No Load (Idle)
 - Constant Load
-- Abrupt Load (Initially No Load)
-- Abrupt Load (Initially Constant Load)
-### Electroic Governor:
+- Abrupt Load Increase (Initially No Load)
+- Abrupt Load Increase (Initially Constant Load)
+- Abrupt Load Decrease (Initially No Load)
+- Abrupt Load Decrease (Initially Constant Load)
+### Electronic Governor:
 - No Load (Idle)
 - Constant Load
-- Abrupt Load (Initially No Load)
-- Abrupt Load (Initially Constant Load)
+- Abrupt Load Increase (Initially No Load)
+- Abrupt Load Increase (Initially Constant Load)
+- Abrupt Load Decrease (Initially No Load)
+- Abrupt Load Decrease (Initially Constant Load)
 ### Baseline - No Throttle Addjustment:
 - No Load (Idle)
 - Constant Load
