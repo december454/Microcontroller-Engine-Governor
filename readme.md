@@ -17,8 +17,26 @@ This project will explore these benefits and measure how much of an improvement 
 
 Additionally, this project will document the design / fabrication process of creating the computerized governor. This will provide valuable insight on engine control theory and engine electronics.
 
+## Testing Methodology:
+### Mechanical Governor:
+- No Load (Idle)
+- Constant Load
+- Abrupt Load Increase (Initially No Load)
+- Abrupt Load Increase (Initially Constant Load)
+- Abrupt Load Decrease (Initially No Load)
+- Abrupt Load Decrease (Initially Constant Load)
+### Electronic Governor:
+- No Load (Idle)
+- Constant Load
+- Abrupt Load Increase (Initially No Load)
+- Abrupt Load Increase (Initially Constant Load)
+- Abrupt Load Decrease (Initially No Load)
+- Abrupt Load Decrease (Initially Constant Load)
+### Baseline - No Throttle Addjustment:
+- No Load (Idle)
+- Constant Load
 
-# To-Do
+## To-Do
 - ~~Reinforce Stepper Motor Bracket~~ (Completed 3-3-2023)
 - ~~Secure Limit Switch~~ (Completed 3-3-2023)
 - ~~Rewrite code so that the "directionFlag" is controlled by the PID output.~~ (Completed 3-7-2023)
@@ -28,8 +46,14 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Add Main Power Switch.~~ (Completed 3-8-2023)
 - ~~Add Stepper Power Switch.~~ (Completed 3-8-2023)
 - ~~Change RPM calc timer (timeElapsed) from milliseconds to microseconds.~~ (Completed 3-10-2023)
+- ~~Add Spring to Pre-Load Stepper Gearbox~~ (Completed 3-22-2023)
 - Improve Shutdown Behavior
 - Improve Data Logging.
 - Tune PID Loop
 - Add more useful info to readme.
 - Repurpose the Stepper on/off switch to function as a kill switch.
+- Perfrom Experiments on Original Governor
+- Perfrom Experiments on Electroic Governor
+- Perfrom Experiments on Original Governor
+- Perfrom Experiments on Control (No Throttle Input)
+
