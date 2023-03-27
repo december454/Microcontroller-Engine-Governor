@@ -3,12 +3,12 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.13";
-/* Version 1.13 Changes:
+const String version = "1.14";
+/* Version 1.14 Changes:
  * * * * * * * * * * * *
- * Corrected error in PID I equation.
  * PID Tuning. 
- * RPM precision.
+ * Dynamic D Control Removed
+ * D RPM Delta Filtered
  * Startup steps.
  */
 
@@ -16,10 +16,10 @@ const String version = "1.13";
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.01, Ki=0.005, Kd=3;                  // PID gain variables.
+const double Kp=.01, Ki=0.0, Kd=100;                  // PID gain variables.
 //const double Kp=.02, Ki=0, Kd=6;
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
-const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
+const int startupSteps = 800;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
@@ -132,17 +132,34 @@ int calculatePid(){
   // Calculating Proportional Value: (P-Gain * RPM Difference)
   pidP = Kp * rpmDiff;
 
+  int rpmDelta = rpmDiff - rpmDiffPrev;
 
-  
-  // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
-  if (abs(rpmDiff) <= 300){
-    if (rpmDiff <= 200)
-      pidD = 0;
-    else
-      pidD = ((Kd * ((rpmDiff - 200) * (rpmDiff - 100))/10000)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+  if(abs(rpmDelta) < 20){
+    pidD = 0;
   }
-  else
-    pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+  
+  else{
+    if (rpmDelta < 0)
+      rpmDelta += 20;
+    else
+      rpmDelta -= 20;
+  
+  
+    // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
+//    if (abs(rpmDiff) <= 200){
+//      if (abs(rpmDiff) <= 100)
+//        pidD = 0;
+//      else
+//        pidD = ((Kd * ((rpmDiff - 100) * (rpmDiff - 100))/10000)) * ((rpmDelta) / pidTimeElapsed.read());
+//    }
+//    else  
+      pidD = Kd * ((rpmDelta) / pidTimeElapsed.read());
+
+  }
+  if (rpmDiff < 250 && pidD > 0){
+    pidD = 0;
+  }
+    
 
   // If the RPM is near the target and the integral calculation will have a meaningful effect.
   if (abs(rpmDiff) < rpmPrecisionI)
@@ -260,7 +277,9 @@ void serialOutput(){
   Serial.print(',');
   Serial.print(pidI);
   Serial.print(',');
-  Serial.println(pidD);
+  Serial.print(pidD);
+  Serial.print(',');
+  Serial.println((rpmDiff - rpmDiffPrev));
 }
 
 void printDebugInfo(){
@@ -285,5 +304,5 @@ void printDebugInfo(){
   Serial.println ("                             |");
   Serial.println ((String)"LCD Update Interval: " + lcdUpdateInterval + "     |  Serial Update Interval:  " + serialUpdateInterval);
   Serial.println ("-------------------------------------------------------------\n");
-  Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID i, PID d");
+  Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID i, PID d, RPM Change");
 }
