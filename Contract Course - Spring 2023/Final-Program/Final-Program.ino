@@ -3,19 +3,21 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.12";
-/* Version 1.12 Changes:
+const String version = "1.13";
+/* Version 1.13 Changes:
  * * * * * * * * * * * *
+ * Corrected error in PID I equation.
  * PID Tuning. 
- * Improved dynamic D gain.
- * D gain remains constant while rpmDiff >= 300, decreases while rpmDiff >= 200, and then is set to zero while rpmDiff < 200.
+ * RPM precision.
+ * Startup steps.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.01, Ki=0, Kd=3;                  // PID gain variables.
+const double Kp=.01, Ki=0.005, Kd=3;                  // PID gain variables.
+//const double Kp=.02, Ki=0, Kd=6;
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 900;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
@@ -25,7 +27,7 @@ const int stepperSwitchPin = 52;                  // Pin for stepper disable / e
 const int limitSwitch = 12;                       // Pin for the limit switch.
 const int desiredRpm = 3600;                      // Desired RPM.
 const int rpmPrecision = 2;                       // Acceptable discrepency between desired and actual RPM.
-const int rpmPrecisionI = rpmPrecision + 20;      // Descripency where PID integral tuning will come into play.
+const int rpmPrecisionI = rpmPrecision + 200;      // Descripency where PID integral tuning will come into play.
 const int numMagnets = 1;                         // Number of magnets on the flywheel.
 const int rpmCalcInterval = 1;                    // Number of revolutions between each RPM calculation.
 const int lcdChar = 16, lcdRow = 2;               // LCD display dimensions.
@@ -143,7 +145,7 @@ int calculatePid(){
     pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
   // If the RPM is near the target and the integral calculation will have a meaningful effect.
-  if (abs(rpmDiff) > rpmPrecisionI)
+  if (abs(rpmDiff) < rpmPrecisionI)
     // Calculating Integral Value: Current Integral Value + (I-Gain * RPM Difference)
     pidI += pidI + (Ki * rpmDiff);
   // Else, the integral value is 0;
