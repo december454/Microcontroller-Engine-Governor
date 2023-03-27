@@ -3,23 +3,22 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.14";
-/* Version 1.14 Changes:
+const String version = "1.15";
+/* Version 1.15 Changes:
  * * * * * * * * * * * *
- * PID Tuning. 
- * Dynamic D Control Removed
- * D RPM Delta Filtered
- * Startup steps.
+ * PID D control changes, special behavior for major RPM changes.
+ * Serial output now prints RPM change since last PID calculation. Useful for tuning PID D gain.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.01, Ki=0.0, Kd=100;                  // PID gain variables.
+const double Kp=.02, Ki=0.00, Kd=8;                  // PID gain variables.
 //const double Kp=.02, Ki=0, Kd=6;
+const int majorRpmChange = 50;                   // The change in RPM between PID calculations which triggers aggressive PID D calculations.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
-const int startupSteps = 800;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
+const int startupSteps = 850;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
 const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
 const int hallSensorPin = 2;                      // Pin for hall effect sensor.
@@ -39,6 +38,7 @@ const int vo = 9, rs = 8, en = 7, d4 = 6, d5 = 5, d6 = 4, d7 = 3; // Pins for th
 const String lcdHeader = " Set  | Curr RPM";  // Text header displayed during normal operation.
 
 double rpm = 0;                     // Current RPM.
+double rpmChange;                   // Change in RPM between PID calculations.
 double rpmDiff = 0;                 // Difference between the current RPM and desired RPM.
 double rpmDiffPrev = 0;             // The rpmDiff value from the prior update. (Used for PID calculations.)
 int sensorActivations = 0;          // Number of times the hall sensor has been activated.
@@ -129,37 +129,36 @@ void calcRpm(){
 
 // Method for calculating a PID output, based on the discrpency between the current and desired RPM.
 int calculatePid(){  
+  rpmChange = (rpmDiff - rpmDiffPrev);
+  
   // Calculating Proportional Value: (P-Gain * RPM Difference)
   pidP = Kp * rpmDiff;
 
-  int rpmDelta = rpmDiff - rpmDiffPrev;
 
-  if(abs(rpmDelta) < 20){
-    pidD = 0;
-  }
   
-  else{
-    if (rpmDelta < 0)
-      rpmDelta += 20;
+  // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
+  if (abs(rpmDiff) <= 240){
+    if (rpmDiff <= 40)
+      pidD = 0;
     else
-      rpmDelta -= 20;
-  
-  
-    // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
-//    if (abs(rpmDiff) <= 200){
-//      if (abs(rpmDiff) <= 100)
-//        pidD = 0;
-//      else
-//        pidD = ((Kd * ((rpmDiff - 100) * (rpmDiff - 100))/10000)) * ((rpmDelta) / pidTimeElapsed.read());
-//    }
-//    else  
-      pidD = Kd * ((rpmDelta) / pidTimeElapsed.read());
+      pidD = ((Kd * ((rpmDiff - 40) * (rpmDiff - 40))/40000)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
+    // If the RPM has rapidly changed.
+    if (abs(rpmChange) > majorRpmChange){
+      if ((rpmChange) < 0)
+        pidD -= sqrt(abs(rpmChange) - majorRpmChange);
+      else
+        pidD += sqrt(abs(rpmChange) - majorRpmChange);
+    }
   }
+  else
+    pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+
+
+
   if (rpmDiff < 250 && pidD > 0){
     pidD = 0;
   }
-    
 
   // If the RPM is near the target and the integral calculation will have a meaningful effect.
   if (abs(rpmDiff) < rpmPrecisionI)
@@ -279,7 +278,7 @@ void serialOutput(){
   Serial.print(',');
   Serial.print(pidD);
   Serial.print(',');
-  Serial.println((rpmDiff - rpmDiffPrev));
+  Serial.println(rpmChange);
 }
 
 void printDebugInfo(){
