@@ -23,14 +23,12 @@ Additionally, this project will document the design / fabrication process of cre
 - Constant Load
 - Abrupt Load Increase (Initially No Load)
 - Abrupt Load Increase (Initially Constant Load)
-- Abrupt Load Decrease (Initially No Load)
 - Abrupt Load Decrease (Initially Constant Load)
 ### Electronic Governor:
 - No Load (Idle)
 - Constant Load
 - Abrupt Load Increase (Initially No Load)
 - Abrupt Load Increase (Initially Constant Load)
-- Abrupt Load Decrease (Initially No Load)
 - Abrupt Load Decrease (Initially Constant Load)
 ### Baseline - No Throttle Addjustment:
 - No Load (Idle)
