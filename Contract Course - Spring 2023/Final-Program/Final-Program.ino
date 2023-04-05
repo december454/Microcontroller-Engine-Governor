@@ -1,22 +1,28 @@
 // Griffin White
-// 3-8-2023
+// 4-5-2023
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.15";
-/* Version 1.15 Changes:
+const String version = "1.16";
+/* Version 1.16 Changes:
  * * * * * * * * * * * *
+ * PID I removed.
+ * Alternate PID P gain added.
+ * Alternate PID D gain added.
  * PID D control changes, special behavior for major RPM changes.
  * Serial output now prints RPM change since last PID calculation. Useful for tuning PID D gain.
+ * Serial output now print the total number of steps commanded by each PID component.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-const double Kp=.02, Ki=0.00, Kd=8;                  // PID gain variables.
+//const double Kp=.015, Ki=0.005, Kd=8;                  // PID gain variables.
 //const double Kp=.02, Ki=0, Kd=6;
-const int majorRpmChange = 50;                   // The change in RPM between PID calculations which triggers aggressive PID D calculations.
+//const double Kp=.015, Ki=.02, Kd=2;
+const double Kp=.013, KpAlt=.025, Kd=.1, KdAlt = 4;
+const int majorRpmChange = 150;                   // The change in RPM between PID calculations which triggers aggressive PID D calculations.
 const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
 const int startupSteps = 850;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
 const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
@@ -25,8 +31,8 @@ const int hallSensorPin = 2;                      // Pin for hall effect sensor.
 const int stepperSwitchPin = 52;                  // Pin for stepper disable / enable switch.
 const int limitSwitch = 12;                       // Pin for the limit switch.
 const int desiredRpm = 3600;                      // Desired RPM.
-const int rpmPrecision = 2;                       // Acceptable discrepency between desired and actual RPM.
-const int rpmPrecisionI = rpmPrecision + 200;      // Descripency where PID integral tuning will come into play.
+const int rpmPrecision = 20;                       // Acceptable discrepency between desired and actual RPM.
+const int KpAltRange = rpmPrecision + 50;      // Descripency where PID integral tuning will come into play.
 const int numMagnets = 1;                         // Number of magnets on the flywheel.
 const int rpmCalcInterval = 1;                    // Number of revolutions between each RPM calculation.
 const int lcdChar = 16, lcdRow = 2;               // LCD display dimensions.
@@ -43,8 +49,9 @@ double rpmDiff = 0;                 // Difference between the current RPM and de
 double rpmDiffPrev = 0;             // The rpmDiff value from the prior update. (Used for PID calculations.)
 int sensorActivations = 0;          // Number of times the hall sensor has been activated.
 int stepsRemaining = 0;             // Number of stepper motor steps remaining.
-int pidP = 0, pidI = 0, pidD = 0;   // Output variables for the PID loop.
+int pidP = 0, pidPAlt = 0, pidD = 0;   // Output variables for the PID loop.
 int stringIndex = 0;                // Current index within a String being printed to the LCD display.
+long pCmd = 0, pAltCmd = 0, dCmd = 0;  // Total number of steps commanded by the P I and D functions.
 bool throttleRpmUpdated = false;    // If the RPM has just been calculated.
 bool directionFlag = true;          // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
 bool engineRunning = false;         // If the engine is running.
@@ -103,6 +110,10 @@ void loop() {
     // Flagging that the engine is running.
     engineRunning = true;
 
+  if (timeElapsed.read() / 1000 > stallTimeout)
+    // Setting the rpm to 0.
+    rpm = 0;
+
   // If the engine has not been started or it was running and has stopped.
   if ((timeElapsed.read() / 1000 > stallTimeout && engineRunning) || (!stepperInitialized && !engineRunning)){
     // Initializig the stepper motor, preparing for the engine to be restarted.
@@ -133,15 +144,15 @@ int calculatePid(){
   
   // Calculating Proportional Value: (P-Gain * RPM Difference)
   pidP = Kp * rpmDiff;
-
+  pidD =0;
 
   
   // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
-  if (abs(rpmDiff) <= 240){
-    if (rpmDiff <= 40)
+  if (abs(rpmDiff) <= 300){
+    if (abs(rpmDiff) <= 150)
       pidD = 0;
     else
-      pidD = ((Kd * ((rpmDiff - 40) * (rpmDiff - 40))/40000)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
+      pidD = ((Kd * ((abs(rpmDiff) - 150))/150)) * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
     // If the RPM has rapidly changed.
     if (abs(rpmChange) > majorRpmChange){
@@ -150,30 +161,36 @@ int calculatePid(){
       else
         pidD += sqrt(abs(rpmChange) - majorRpmChange);
     }
-  }
+    }
+  else if (abs(rpmDiff) > 900)
+    pidD = KdAlt * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
   else
     pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
 
 
-  if (rpmDiff < 250 && pidD > 0){
+  if ((rpmDiff < 250 && pidD > 0)){
     pidD = 0;
   }
 
   // If the RPM is near the target and the integral calculation will have a meaningful effect.
-  if (abs(rpmDiff) < rpmPrecisionI)
+  if (abs(rpmDiff) < KpAltRange)
     // Calculating Integral Value: Current Integral Value + (I-Gain * RPM Difference)
-    pidI += pidI + (Ki * rpmDiff);
+    pidPAlt = (KpAlt * rpmDiff);
   // Else, the integral value is 0;
   else
-    pidI = 0;
+    pidPAlt = 0;
 
   // Restarting the PID timer.
   pidTimeElapsed.start();
 
   // Finding the total of the functions.
-  int total = pidP + pidI + pidD;
+  int total = pidP + pidPAlt + pidD;
   // int total = pidP;
+
+  pCmd += abs(pidP);
+  pAltCmd += abs(pidPAlt);
+  dCmd += abs(pidD);
 
   // If the total is positive. (The throttle needs to increase.)
   if (total >= 0)
@@ -274,28 +291,36 @@ void serialOutput(){
   Serial.print(',');
   Serial.print(pidP);
   Serial.print(',');
-  Serial.print(pidI);
+  Serial.print(pidPAlt);
   Serial.print(',');
   Serial.print(pidD);
   Serial.print(',');
-  Serial.println(rpmChange);
+  Serial.print(rpmChange);
+  Serial.print(',');
+  Serial.print(pCmd);
+  Serial.print(',');
+  Serial.print(pAltCmd);
+  Serial.print(',');
+  Serial.println(dCmd);
 }
 
 void printDebugInfo(){
   Serial.println ((String)"------ Microcontroller Engine Governor - Version: " + version + " ------");
   Serial.println ("-------------------------------------------------------------");
   
-  Serial.print   ((String)"PID Gains:        Kp: ");
-  Serial.print   (Kp, 6);
-  Serial.print   ("   Ki: ");
-  Serial.print   (Ki, 6);
-  Serial.print   ("   Kd: ");
-  Serial.print   (Kd, 6);
+  Serial.print   ((String)"PID Gains:  Kp: ");
+  Serial.print   (Kp, 3);
+  Serial.print   ("  KpAlt: ");
+  Serial.print   (KpAlt, 3);
+  Serial.print   ("  Kd: ");
+  Serial.print   (Kd, 3);
+  Serial.print   ("  KdAlt: ");
+  Serial.print   (KdAlt, 3);
   
   Serial.println ("\n-------------------------------------------------------------");
-  Serial.println ((String)"Set RPM:             " + ((int)desiredRpm)        + "    |  Min RPM:                " + minRpm);
+  Serial.println ((String)"Set RPM:             " + ((int)desiredRpm)        + "    |  Min RPM:                 " + minRpm);
   Serial.println ("                             |");
-  Serial.println ((String)"RPM Precision        " + rpmPrecision      + "       |  PID I Precision:         " + rpmPrecisionI);
+  Serial.println ((String)"RPM Precision:       " + rpmPrecision      + "      |  PID Kp Alt Range:        " + KpAltRange);
   Serial.println ("                             |");
   Serial.println ((String)"Start Steps:         " + startupSteps      + "     |  Max Steps:               " + maxSteps);
   Serial.println ("                             |");
@@ -303,5 +328,5 @@ void printDebugInfo(){
   Serial.println ("                             |");
   Serial.println ((String)"LCD Update Interval: " + lcdUpdateInterval + "     |  Serial Update Interval:  " + serialUpdateInterval);
   Serial.println ("-------------------------------------------------------------\n");
-  Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID i, PID d, RPM Change");
+  Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID p Alt, PID d, RPM Change, P Cmd, P Alt Cmd, D Cmd");
 }
