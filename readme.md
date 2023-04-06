@@ -45,13 +45,12 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Add Stepper Power Switch.~~ (Completed 3-8-2023)
 - ~~Change RPM calc timer (timeElapsed) from milliseconds to microseconds.~~ (Completed 3-10-2023)
 - ~~Add Spring to Pre-Load Stepper Gearbox~~ (Completed 3-22-2023)
-- Improve Shutdown Behavior
-- Improve Data Logging.
-- Tune PID Loop
-- Add more useful info to readme.
-- Repurpose the Stepper on/off switch to function as a kill switch.
-- Perfrom Experiments on Original Governor
-- Perfrom Experiments on Electroic Governor
-- Perfrom Experiments on Original Governor
-- Perfrom Experiments on Control (No Throttle Input)
-
+- ~~Improve Shutdown Behavior~~
+- ~~Improve Data Logging.~~
+- ~~Tune PID Loop~~
+- ~~Add more useful info to readme.~~
+- ~~Perfrom Experiments on Electroic Governor~~ (Completed 4-5-2023)
+- ~~Perfrom Experiments on Original Governor~~ (Completed 4-3-2023)
+- ~~Perfrom Experiments on Control (No Throttle Input)~~ (Completed 3-31-2023)
+- Analyze Data
+- Complete Final Report
