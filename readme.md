@@ -17,22 +17,23 @@ This project will explore these benefits and measure how much of an improvement 
 
 Additionally, this project will document the design / fabrication process of creating the computerized governor. This will provide valuable insight on engine control theory and engine electronics.
 
-## Testing Methodology:
+## Experiment Results:
+- [Raw Data](https://github.com/december454/Microcontroller-Engine-Governor/tree/main/Data-Logging/Experiments): Click here to view the individual Excel spreadsheets / txt data logs for each experiement trial.
 ### Mechanical Governor:
-- No Load (Idle)
-- Constant Load
-- Abrupt Load Increase (Initially No Load)
-- Abrupt Load Increase (Initially Constant Load)
-- Abrupt Load Decrease (Initially Constant Load)
-### Electronic Governor:
-- No Load (Idle)
-- Constant Load
-- Abrupt Load Increase (Initially No Load)
-- Abrupt Load Increase (Initially Constant Load)
-- Abrupt Load Decrease (Initially Constant Load)
+- [No Load (Idle)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Mech%20Gov%20-%20No%20Load.xlsx)
+- [Constant Load](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Mech%20Gov%20-%20Constant%20Load.xlsx)
+- [Abrupt Load Increase (Initially No Load)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Mech%20Gov%20-%20Load%20Increase%20(Initially%20No%20Load).xlsx)
+- [Abrupt Load Increase (Initially Constant Load)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Mech%20Gov%20-%20Load%20Increse%20(Initially%20Constant%20Load).xlsx)
+- [Abrupt Load Decrease](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Mech%20Gov%20-%20Load%20Decrease.xlsx)
+### Microcontroller Governor:
+- [No Load (Idle)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Micocontroller%20Gov%20-%20No%20Load.xlsx)
+- [Constant Load](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Microcontroller%20Gov%20-%20Constant%20Load.xlsx)
+- [Abrupt Load Increase (Initially No Load)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Microcontroller%20Gov%20-%20Load%20Increase%20(No%20Load).xlsx)
+- [Abrupt Load Increase (Initially Constant Load)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Microcontroller%20Gov%20-%20Load%20Increase%20(Constant%20Load).xlsx)
+- [Abrupt Load Decrease](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20Micrcontroller%20Gov%20-%20Load%20Decrease.xlsx)
 ### Baseline - No Throttle Addjustment:
-- No Load (Idle)
-- Constant Load
+- [No Load (Idle)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20No%20Throttle%20Input%20-%20No%20load.xlsx)
+- [Constant Load](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Experiment%20Summaries/Summary%20-%20No%20Throttle%20Input%20-%20Constant%20Load.xlsx)
 
 ## To-Do
 - ~~Reinforce Stepper Motor Bracket~~ (Completed 3-3-2023)
@@ -52,5 +53,5 @@ Additionally, this project will document the design / fabrication process of cre
 - ~~Perfrom Experiments on Electroic Governor~~ (Completed 4-5-2023)
 - ~~Perfrom Experiments on Original Governor~~ (Completed 4-3-2023)
 - ~~Perfrom Experiments on Control (No Throttle Input)~~ (Completed 3-31-2023)
-- Analyze Data
+- ~~Analyze Data~~ (Completed 4-9-2023)
 - Complete Final Report
