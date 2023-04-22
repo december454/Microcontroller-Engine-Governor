@@ -3,68 +3,60 @@
 // Spring 2023 Contract Course
 // Engine Governor: Final Program
 
-const String version = "1.16";
-/* Version 1.16 Changes:
+const String version = "1.17";
+/* Version 1.17 Changes:
  * * * * * * * * * * * *
- * PID I removed.
- * Alternate PID P gain added.
- * Alternate PID D gain added.
- * PID D control changes, special behavior for major RPM changes.
- * Serial output now prints RPM change since last PID calculation. Useful for tuning PID D gain.
- * Serial output now print the total number of steps commanded by each PID component.
+ * Improved Comments.
  */
 
 #include <LiquidCrystal.h>      // LCD library.
 #include "Timer.h"              // Timer library.
 #include "CheapStepper.h"       // Stepper motor control library.
 
-//const double Kp=.015, Ki=0.005, Kd=8;                  // PID gain variables.
-//const double Kp=.02, Ki=0, Kd=6;
-//const double Kp=.015, Ki=.02, Kd=2;
-const double Kp=.013, KpAlt=.025, Kd=.1, KdAlt = 4;
-const int majorRpmChange = 150;                   // The change in RPM between PID calculations which triggers aggressive PID D calculations.
-const int maxSteps = 1200;                        // Maximum number of steps that the stepper motor can take before reaching end of travel.
-const int startupSteps = 850;                     // The number of steps from wide-open which the stepper motor will open the throttle for startup.
-const int minRpm = 300;                           // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
-const int stallTimeout = 200;                     // The minimum amount of time (ms) between pulses when the engine is considered stalled.
-const int hallSensorPin = 2;                      // Pin for hall effect sensor.
-const int stepperSwitchPin = 52;                  // Pin for stepper disable / enable switch.
-const int limitSwitch = 12;                       // Pin for the limit switch.
-const int desiredRpm = 3600;                      // Desired RPM.
-const int rpmPrecision = 20;                       // Acceptable discrepency between desired and actual RPM.
-const int KpAltRange = rpmPrecision + 50;      // Descripency where PID integral tuning will come into play.
-const int numMagnets = 1;                         // Number of magnets on the flywheel.
-const int rpmCalcInterval = 1;                    // Number of revolutions between each RPM calculation.
-const int lcdChar = 16, lcdRow = 2;               // LCD display dimensions.
-const int lcdContrast = 90;                       // Contrast value (0-255) for the LCD display.
-const int lcdUpdateInterval = 400;                // Update interval (ms) for the LCD display.
-const int serialUpdateInterval = 50;              // Update interval (ms) for the serial output.  
-const int in1 = 38, in2 = 40, in3 = 42, in4 = 44; // Pins for the stepper motor driver.
+const double Kp=.013, KpAlt=.025, Kd=.1, KdAlt = 4; // PID gain variables.
+const int majorRpmChange = 150;                     // The change in RPM between PID calculations which triggers aggressive PID D calculations.
+const int maxSteps = 1200;                          // Maximum number of steps that the stepper motor can take before reaching end of travel.
+const int startupSteps = 850;                       // The number of steps from wide-open which the stepper motor will open the throttle for startup.
+const int minRpm = 300;                             // The minimum RPM value where the controller will try to adjust the throttle. (Prevents the system from going to full throttle during startup.)
+const int stallTimeout = 200;                       // The minimum amount of time (ms) between pulses when the engine is considered stalled.
+const int hallSensorPin = 2;                        // Pin for hall effect sensor.
+const int stepperSwitchPin = 52;                    // Pin for stepper disable / enable switch.
+const int limitSwitch = 12;                         // Pin for the limit switch.
+const int desiredRpm = 3600;                        // Desired RPM.
+const int rpmPrecision = 20;                        // Acceptable discrepency between desired and actual RPM.
+const int KpAltRange = 70;                          // Range from the setpoint where alternate PID P tuning will be enabled.
+const int KdAltRange = 900;                         // Range from the setpoint where alternate PID D tuning will be disabled.
+const int numMagnets = 1;                           // Number of magnets on the flywheel.
+const int rpmCalcInterval = 1;                      // Number of revolutions between each RPM calculation.
+const int lcdChar = 16, lcdRow = 2;                 // LCD display dimensions.
+const int lcdContrast = 90;                         // Contrast value (0-255) for the LCD display.
+const int lcdUpdateInterval = 400;                  // Update interval (ms) for the LCD display.
+const int serialUpdateInterval = 50;                // Update interval (ms) for the serial output.  
+const int in1 = 38, in2 = 40, in3 = 42, in4 = 44;   // Pins for the stepper motor driver.
 const int vo = 9, rs = 8, en = 7, d4 = 6, d5 = 5, d6 = 4, d7 = 3; // Pins for the LCD.
-const String lcdHeader = " Set  | Curr RPM";  // Text header displayed during normal operation.
+const String lcdHeader = " Set  | Curr RPM";        // Text header displayed during normal operation.
 
-double rpm = 0;                     // Current RPM.
-double rpmChange;                   // Change in RPM between PID calculations.
-double rpmDiff = 0;                 // Difference between the current RPM and desired RPM.
-double rpmDiffPrev = 0;             // The rpmDiff value from the prior update. (Used for PID calculations.)
-int sensorActivations = 0;          // Number of times the hall sensor has been activated.
-int stepsRemaining = 0;             // Number of stepper motor steps remaining.
-int pidP = 0, pidPAlt = 0, pidD = 0;   // Output variables for the PID loop.
-int stringIndex = 0;                // Current index within a String being printed to the LCD display.
-long pCmd = 0, pAltCmd = 0, dCmd = 0;  // Total number of steps commanded by the P I and D functions.
-bool throttleRpmUpdated = false;    // If the RPM has just been calculated.
-bool directionFlag = true;          // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
-bool engineRunning = false;         // If the engine is running.
-bool stepperInitialized = false;    // If the stepper has been initialized.
-String stringRpm = "0";             // String representation of the current rpm. 
+double rpm = 0;                       // Current RPM.
+double rpmChange;                     // Change in RPM between PID calculations.
+double rpmDiff = 0;                   // Difference between the current RPM and desired RPM.
+double rpmDiffPrev = 0;               // The rpmDiff value from the prior update. (Used for PID calculations.)
+int sensorActivations = 0;            // Number of times the hall sensor has been activated.
+int stepsRemaining = 0;               // Number of stepper motor steps remaining.
+int pidP = 0, pidPAlt = 0, pidD = 0;  // Output variables for the PID loop.
+int stringIndex = 0;                  // Current index within a String being printed to the LCD display.
+long pCmd = 0, pAltCmd = 0, dCmd = 0; // Total number of steps commanded by the P I and D functions.
+bool throttleRpmUpdated = false;      // If the RPM has just been calculated.
+bool directionFlag = true;            // If the stepper motor should rotate clockwise (increase throttle) or counter-clockwise (decrease throttle).
+bool engineRunning = false;           // If the engine is running.
+bool stepperInitialized = false;      // If the stepper has been initialized.
+String stringRpm = "0";               // String representation of the current rpm. 
 
-Timer timeElapsed(MICROS);        // Timer object for RPM calculations.
-Timer displayUpdateTimer(MILLIS); // Timer object for updating the LCD.
-Timer pidTimeElapsed(MILLIS);     // Timer object for PID change-over-time calculations.
-Timer serialOutputTimer(MILLIS);  // Timer object for serial output.
+Timer timeElapsed(MICROS);            // Timer object for RPM calculations.
+Timer displayUpdateTimer(MILLIS);     // Timer object for updating the LCD.
+Timer pidTimeElapsed(MILLIS);         // Timer object for PID change-over-time calculations.
+Timer serialOutputTimer(MILLIS);      // Timer object for serial output.
 
 CheapStepper stepperMotor(in1, in2, in3, in4);  // CheapStepper Object.
-
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);      // LCD display object.
 
 void setup() {
@@ -79,9 +71,9 @@ void setup() {
   pidTimeElapsed.start();                     // Starting the PID derivative timer.
   serialOutputTimer.start();                  // Starting the serial output timer.
   
-  printDebugInfo();
-  initializeLcd();
-  initializeStepper();
+  printDebugInfo();                           // Print debug info to te serial output.
+  initializeLcd();                            // Print the header to LCD display.
+  initializeStepper();                        // Initialze the stepper motor / throttle.
 }
 
 void loop() {
@@ -110,6 +102,7 @@ void loop() {
     // Flagging that the engine is running.
     engineRunning = true;
 
+  // If the engine has stopped.
   if (timeElapsed.read() / 1000 > stallTimeout)
     // Setting the rpm to 0.
     rpm = 0;
@@ -144,8 +137,14 @@ int calculatePid(){
   
   // Calculating Proportional Value: (P-Gain * RPM Difference)
   pidP = Kp * rpmDiff;
-  pidD =0;
 
+  // If the RPM is near the target.
+  if (abs(rpmDiff) < KpAltRange)
+    // Calculating alternate PID P value.
+    pidPAlt = (KpAlt * rpmDiff);
+  // Else, the alternate P value is 0;
+  else
+    pidPAlt = 0;
   
   // Calculating Derivative Value: (D-Gain * (Change in RPM / Time Elapsed))
   if (abs(rpmDiff) <= 300){
@@ -161,43 +160,34 @@ int calculatePid(){
       else
         pidD += sqrt(abs(rpmChange) - majorRpmChange);
     }
-    }
+  }
   else if (abs(rpmDiff) > 900)
     pidD = KdAlt * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
   else
     pidD = Kd * ((rpmDiff - rpmDiffPrev) / pidTimeElapsed.read());
 
-
-
   if ((rpmDiff < 250 && pidD > 0)){
     pidD = 0;
-  }
-
-  // If the RPM is near the target and the integral calculation will have a meaningful effect.
-  if (abs(rpmDiff) < KpAltRange)
-    // Calculating Integral Value: Current Integral Value + (I-Gain * RPM Difference)
-    pidPAlt = (KpAlt * rpmDiff);
-  // Else, the integral value is 0;
-  else
-    pidPAlt = 0;
-
+  }  
   // Restarting the PID timer.
   pidTimeElapsed.start();
 
   // Finding the total of the functions.
   int total = pidP + pidPAlt + pidD;
-  // int total = pidP;
 
+  // Recording how many steps each portion of the PID calculation commanded.
   pCmd += abs(pidP);
   pAltCmd += abs(pidPAlt);
   dCmd += abs(pidD);
 
   // If the total is positive. (The throttle needs to increase.)
   if (total >= 0)
-    directionFlag = false;        // Setting the stepper motor direction to clockwise (increase throttle).
+    // Setting the stepper motor direction to clockwise (increase throttle).
+    directionFlag = false;
   // Else the total is negative. (The throttle needs to decrease.)
   else
-    directionFlag = true;         // Setting the stepper motor direction to counter-clockwise (decrease throttle).
+    // Setting the stepper motor direction to counter-clockwise (decrease throttle).
+    directionFlag = true;
   
   return abs(total);  
 }
@@ -239,6 +229,7 @@ void updateDisplay(){
   }    
 }
 
+// Method for initializing the LCD display.
 void initializeLcd(){
   lcd.clear();
   lcd.setCursor(0,0);
@@ -250,6 +241,7 @@ void initializeLcd(){
   lcd.setCursor(8,1);
 }
 
+// Method for initializing the stepper motor / throttle.
 void initializeStepper(){
   // If the stepper switch is turned on.
   if (digitalRead(stepperSwitchPin) == LOW){
@@ -274,29 +266,35 @@ void initializeStepper(){
     // Flagging that the stepper has been initialized.
     stepperInitialized = true;
   }
-
   stepperMotor.stop();
 }
 
+// Method for printing data logging info to the serial output.
 void serialOutput(){
   serialOutputTimer.start();
+  // Print time elapsed.
   Serial.print(millis());
   Serial.print(',');
+  // Print current RPM.
   Serial.print(rpm);
+  // Print the number of stepper steps remaining.
   Serial.print(',');
   if (directionFlag)
     Serial.print(stepsRemaining * -1);
   else
     Serial.print(stepsRemaining);
   Serial.print(',');
+  // Print the current PID calculations.
   Serial.print(pidP);
   Serial.print(',');
   Serial.print(pidPAlt);
   Serial.print(',');
   Serial.print(pidD);
   Serial.print(',');
+  // Print the change in RPM since the last RPM calculation.
   Serial.print(rpmChange);
   Serial.print(',');
+  // Print how many steps were commanded by each of the PID calculations.
   Serial.print(pCmd);
   Serial.print(',');
   Serial.print(pAltCmd);
@@ -304,10 +302,13 @@ void serialOutput(){
   Serial.println(dCmd);
 }
 
+// Method for printing a header / debug info to the serial output.
 void printDebugInfo(){
+  // Print program name and version.
   Serial.println ((String)"------ Microcontroller Engine Governor - Version: " + version + " ------");
   Serial.println ("-------------------------------------------------------------");
-  
+
+  // Print the PID gain values.
   Serial.print   ((String)"PID Gains:  Kp: ");
   Serial.print   (Kp, 3);
   Serial.print   ("  KpAlt: ");
@@ -316,7 +317,8 @@ void printDebugInfo(){
   Serial.print   (Kd, 3);
   Serial.print   ("  KdAlt: ");
   Serial.print   (KdAlt, 3);
-  
+
+  // Print various constants.
   Serial.println ("\n-------------------------------------------------------------");
   Serial.println ((String)"Set RPM:             " + ((int)desiredRpm)        + "    |  Min RPM:                 " + minRpm);
   Serial.println ("                             |");
@@ -328,5 +330,7 @@ void printDebugInfo(){
   Serial.println ("                             |");
   Serial.println ((String)"LCD Update Interval: " + lcdUpdateInterval + "     |  Serial Update Interval:  " + serialUpdateInterval);
   Serial.println ("-------------------------------------------------------------\n");
+
+  // Print the header for the data logs.
   Serial.println ((String)"Time,RPM,Steps Remaining, PID p, PID p Alt, PID d, RPM Change, P Cmd, P Alt Cmd, D Cmd");
 }
