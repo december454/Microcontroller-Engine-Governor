@@ -1,7 +1,8 @@
 # Microcontroller-Engine-Governor:
 ## Quick Links:
 - [Project Explanation Video - Spring 2023](https://drive.google.com/file/d/1iZ02NeBIo6aJ6PkN2pi3ibztsFP9TJ7J/view?usp=share_link)
-- [Final Report - Spring 2023 (Rough Draft)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Final%20Reports/Microcontroller%20Based%20Engine%20Governor%20-%20Spring%202023%20(Rough%20Draft).pdf)
+- [Final Report - Spring 2023 (Rough Draft)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Final%20Reports/Contract%20Course%20Report%20-%20Spring%202023.docx)
+- [IEEE Embedded Systems Letters Submission - Spring 2023 (Rough Draft)](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Final%20Reports/Embedded%20Control%20for%20Governor_IEEE%20-%20Revised.docx)
 
 - [Test Run Videos](https://drive.google.com/drive/folders/1vf2UiMMJDWpa3UTO7wDQ3YrPN7G2oo9Z?usp=sharing)
 - [Program - Spring 2023](https://github.com/december454/Microcontroller-Engine-Governor/blob/main/Contract%20Course%20-%20Spring%202023/Final-Program/Final-Program.ino)
